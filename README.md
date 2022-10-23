@@ -1,13 +1,13 @@
 # Olympus Wifi-Enabled Camera on Linux, macOS and Windows
 
 Some Olympus cameras have wifi capability. Photos can be downloaded from them;
-they also have remote control capabilities: the live camera picture is
+they can also remote control the camera: the live camera picture is
 transmitted and they take pictures and modify settings via wifi.
 
 This repository provides Python code to connect to a wifi-enabled Olympus
 camera, set the camera's date and time, download images, watch the live camera
 view in a window, take a picture, modify camera settings, and turn the camera
-off. Moreover, command-line arguments allow to send all user-supplied commands
+off. Moreover, command-line arguments allow to send user-specific commands
 to the camera.
 
 ## Connect Camera to Wifi
@@ -15,7 +15,7 @@ to the camera.
 The user's manual explains best how wifi mode is entered by a particular
 Olympus camera. Generally, wifi needs to be enabled in the camera settings and
 set to "private". Then, to enter wifi mode, I press and hold the "Menu" button
-on my TG-5. Beside a QR code, The camera display shows its SSID (wireless
+on my TG-5. Beside a QR code, the camera display shows its SSID (wireless
 network name) and password. The computer needs to be connected to the camera's
 wireless network using that password. That may involve unconnected from the
 wireless network the computer is initially connected to.
@@ -97,10 +97,10 @@ and the first command usually switches the mode.
 
 Arbitrary commands can be sent to the camera this way. In order to get started
 with camera commands, [this spec](https://raw.githubusercontent.com/ccrome/olympus-omd-remote-control/master/OPC_Communication_Protocol_EN_1.0a/OPC_Communication_Protocol_EN_1.0a.pdf)
-may be helpful. It explains a lot but its info does not fully apply to other
+may be helpful. It explains a lot but not all its info applies to other
 camera models.
 
-The commands and command option that the connected camera supports, can be
+The commands and command options that the connected camera supports, can be
 obtained using the command option:
 
 ```
@@ -160,7 +160,7 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 and the image will be downloaded and saved to a file.
 
 My camera has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
-accepted in one of the modes. The can be called `switch_cammode` to switch
+accepted in one of the modes. Command `switch_cammode` is called to switch
 modes.
 
 ```
@@ -169,7 +169,7 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 Error #520 for url 'http://192.168.0.10/get_camprop.cgi?com=get&propname=takemode': errorcode=1001.
 ```
 
-errorCode 1001 appears to indicate that the camera is in the wrong mode. We
+ErrorCode 1001 appears to indicate that the camera is in the wrong mode. We
 set the mode to `rec` and retry:
 
 ```
@@ -187,7 +187,11 @@ an argument is wrong, the error message includes a list of valid arguments:
 ```
 $ ./olympus-camera.py --cmd "switch_cammode mode=rec" "get_camprop com=get propname=whatever"
 Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
-Error in get_camprop: 'whatever' in propname=whatever not supported; supported: propname=touchactiveframe, propname=takemode, propname=drivemode, propname=focalvalue, propname=expcomp, propname=isospeedvalue, propname=wbvalue, propname=artfilter, propname=supermacrosub, propname=supermacrozoom, propname=colortone, propname=cameradrivemode, propname=colorphase, propname=SceneSub, propname=ArtEffectTypePopart, propname=ArtEffectTypeRoughMonochrome, propname=ArtEffectTypeToyPhoto, propname=ArtEffectTypeDaydream, propname=ArtEffectTypeCrossProcess, propname=ArtEffectTypeDramaticTone, propname=ArtEffectTypeLigneClair, propname=ArtEffectTypePastel, propname=ArtEffectTypeMiniature, propname=ArtEffectTypeVintage, propname=ArtEffectTypePartcolor.
+Error in get_camprop: 'whatever' in propname=whatever not supported; supported: propname=touchactiveframe, propname=takemode, propname=drivemode,
+propname=focalvalue, propname=expcomp, propname=isospeedvalue, propname=wbvalue, propname=artfilter, propname=supermacrosub, propname=supermacrozoom,
+propname=colortone, propname=cameradrivemode, propname=colorphase, propname=SceneSub, propname=ArtEffectTypePopart, propname=ArtEffectTypeRoughMonochrome,
+propname=ArtEffectTypeToyPhoto, propname=ArtEffectTypeDaydream, propname=ArtEffectTypeCrossProcess, propname=ArtEffectTypeDramaticTone,
+propname=ArtEffectTypeLigneClair, propname=ArtEffectTypePastel, propname=ArtEffectTypeMiniature, propname=ArtEffectTypeVintage, propname=ArtEffectTypePartcolor.
 ```
 
 These checks also work for commands:
@@ -195,7 +199,12 @@ These checks also work for commands:
 ```
 ./olympus-camera.py --cmd whatever
 Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
-Error: command 'whatever' not supported; valid commands: get_commandlist, get_connectmode, switch_cammode, get_caminfo, exec_pwoff, get_resizeimg, get_movplaytime, clear_resvflg, get_rsvimglist, get_rsvimglist_ext, get_imglist, get_imglist_ext, get_thumbnail, get_screennail, get_movfileinfo, exec_takemotion, exec_takemisc, get_camprop, set_camprop, get_activate, set_utctimediff, get_gpsdivunit, get_unusedcapacity, get_dcffilenum, req_attachexifgps, req_storegpsinfo, exec_shutter, get_agpsinfo, send_agpsassistdata, update_agpsassistdata, check_gpsrecording, check_mountmedia, get_gpsloglist, get_gpsimglist, get_gpsrecordinglog, exec_gpslogfiling, check_snsrecording, get_snsloglist, get_gpssnsimglist, get_snsrecordinglog, exec_snslogfiling, exec_gpssnslogfiling, get_moviestreaminfo, ready_moviestream, start_moviestream, stop_moviestream, exit_moviestream.
+Error: command 'whatever' not supported; valid commands: get_commandlist, get_connectmode, switch_cammode, get_caminfo, exec_pwoff, get_resizeimg,
+get_movplaytime, clear_resvflg, get_rsvimglist, get_rsvimglist_ext, get_imglist, get_imglist_ext, get_thumbnail, get_screennail, get_movfileinfo,
+exec_takemotion, exec_takemisc, get_camprop, set_camprop, get_activate, set_utctimediff, get_gpsdivunit, get_unusedcapacity, get_dcffilenum, req_attachexifgps,
+req_storegpsinfo, exec_shutter, get_agpsinfo, send_agpsassistdata, update_agpsassistdata, check_gpsrecording, check_mountmedia, get_gpsloglist,
+get_gpsimglist, get_gpsrecordinglog, exec_gpslogfiling, check_snsrecording, get_snsloglist, get_gpssnsimglist, get_snsrecordinglog,
+exec_snslogfiling, exec_gpssnslogfiling, get_moviestreaminfo, ready_moviestream, start_moviestream, stop_moviestream, exit_moviestream.
 ```
 
 Your mileage may vary. The commands and command arguments likely differ across
