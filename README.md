@@ -14,8 +14,8 @@ to the camera.
 
 The user's manual explains best how wifi mode is entered by a particular
 Olympus camera. Generally, wifi needs to be enabled in the camera settings and
-set to "private". Then, to enter wifi mode, I press and hold the "Menu" button
-on my TG-5. Beside a QR code, the camera display shows its SSID (wireless
+set to "private". Then, to enter wifi mode, on a TG-5 press and hold the "Menu"
+button. Beside a QR code, the camera display shows its SSID (wireless
 network name) and password. The computer needs to be connected to the camera's
 wireless network using that password. That may involve unconnected from the
 wireless network the computer is initially connected to.
@@ -159,7 +159,7 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 ```
 and the image will be downloaded and saved to a file.
 
-My camera has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
+The TG-5 has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
 accepted in one of the modes. Command `switch_cammode` is called to switch
 modes.
 
