@@ -271,6 +271,7 @@ class OlympusCamera:
 
     # Set the camera clock to this computer's time and timezone.
     def set_clock(self) -> None:
+        self.send_command('switch_cammode', mode='play')
         self.send_command('set_utctimediff', utctime=
                           datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S"),
                           diff=time.strftime("%z"))
@@ -337,3 +338,11 @@ class OlympusCamera:
     # Stop the liveview; the camera will no longer send the RTP live stream.
     def stop_liveview(self) -> None:
         self.send_command('exec_takemisc', com='stopliveview')
+
+    # Report camera model and version info.
+    def report_model(self):
+        if 'model' in self.get_camera_info():
+            model = self.get_camera_info()['model']
+            versions = ', '.join([f'{key} {value}' for key, value in
+                                  self.get_versions().items()])
+            print(f"Connected to Olympus {model}, {versions}.")

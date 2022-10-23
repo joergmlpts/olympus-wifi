@@ -143,6 +143,7 @@ class LiveViewWindow:
     UPDATE_INTERVAL = 25 # msecs
 
     def __init__(self, camera: OlympusCamera, port: int = 40000):
+        self.power_off = False
         self.camera = camera
         self.port = port
         self.img_queue = queue.SimpleQueue()
@@ -188,8 +189,11 @@ class LiveViewWindow:
 
         # File
         self.filemenu = tkinter.Menu(self.menubar, tearoff=0)
-        self.filemenu.add_command(label="Take Picture", command=self.take_pic)
+        self.filemenu.add_command(label="Take picture", command=self.take_pic)
+        self.filemenu.add_command(label="Set clock", command=self.set_clock)
         self.filemenu.add_command(label="Exit", command=self.window.destroy)
+        self.filemenu.add_command(label="Exit & Camera off",
+                                  command=self.power_off_and_exit)
         self.menubar.add_cascade(label="File", menu=self.filemenu)
 
         # View
@@ -246,6 +250,10 @@ class LiveViewWindow:
         udp_client.shut_down()
         self.camera.stop_liveview()
         thread.join()
+
+        if self.power_off:
+            self.camera.send_command('switch_cammode', mode='play')
+            self.camera.send_command('exec_pwoff')
 
     # Take a picture.
     def take_pic(self) -> None:
@@ -317,16 +325,25 @@ class LiveViewWindow:
             idx += length
         assert idx == len(extension)
 
+    # Set camera clock.
+    def set_clock(self):
+        self.camera.stop_liveview()
+        self.camera.set_clock()
+        self.camera.start_liveview(port=self.port,
+                                   lvqty=self.lvqty_list[self.lvqty_cur])
+
+    # Turn camera off and exit.
+    def power_off_and_exit(self):
+        self.power_off = True
+        self.window.destroy()
+
+
 if __name__ == '__main__':
     import argparse
 
     PORT = 40000
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--set_clock', '-c', action="store_true",
-                        help="Set camera clock to current time.")
-    parser.add_argument('--power_off', '-p', action="store_true",
-                        required=False, help="Turn camera off.")
     parser.add_argument('--port', '-P', type=int, default=PORT,
                         help=f"UPD port for liveview (default: {PORT}).")
     args = parser.parse_args()
@@ -335,18 +352,6 @@ if __name__ == '__main__':
     camera = OlympusCamera()
 
     # Report camera model.
-    if 'model' in camera.get_camera_info():
-        model = camera.get_camera_info()['model']
-        versions = ', '.join([f'{key} {value}' for key, value in
-                              camera.get_versions().items()])
-        print(f"Connected to Olympus {model}, {versions}.")
-
-    # Set camera's clock if requested.
-    if args.set_clock:
-        camera.set_clock()
+    camera.report_model()
 
     LiveViewWindow(camera, args.port)
-
-    # Turn camera off if requested.
-    if args.power_off:
-        camera.send_command('exec_pwoff')

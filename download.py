@@ -89,11 +89,7 @@ if __name__ == '__main__':
     camera = OlympusCamera()
 
     # Report camera model.
-    if 'model' in camera.get_camera_info():
-        model = camera.get_camera_info()['model']
-        versions = ', '.join([f'{key} {value}' for key, value in
-                              camera.get_versions().items()])
-        print(f"Connected to Olympus {model}, {versions}.")
+    camera.report_model()
 
     # Set camera's clock if requested.
     if args.set_clock:
