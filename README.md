@@ -101,14 +101,14 @@ may be helpful. It explains a lot but not all its info applies to other
 camera models.
 
 The commands and command options that the connected camera supports, can be
-obtained using the command option:
+obtained as this:
 
 ```
 ./olympus-camera.py --cmd get_commandlist
 ```
 
-The command returns a list of all the supported commands and options as an XML
-document. This is a lengthy document; it can be saved to a file with
+The command returns a list of all the supported commands and options in an XML
+document. This is a lengthy document can be saved to a file with
 redirection:
 
 ```
@@ -140,7 +140,7 @@ VER_100
 ```
 
 There is only one image. It is `PA220001.JPG` in directory `/DCIM/100OLYMP`. The
-image is file of 2,514,746 bytes. We want to download a smaller version with
+image is a file of 2,514,746 bytes. We want to download a smaller version with
 command `get_resizeimg`:
 
 ```
@@ -214,7 +214,7 @@ camera models.
 
 Several of the modules can be of value to other software. Class `OlympiaCamera`
 communicates with the camera. This class allows to send commands to the camera
-and to turns the camera's XML responses into Python dicts. These member
+and it turns the camera's XML responses into Python dicts. These member
 functions are particulary useful:
 
 ```
@@ -225,7 +225,7 @@ camera = OlympiaCamera()
 
 Upon intialization class `OlympiaCamera` issues command `get_commandlist` and
 uses this information about all the camera commands and command options to check
-further commands that are sent to the camera.
+further requests for the camera.
 
 ```
 camera.send_command('command', option1=value, ...)
@@ -241,8 +241,8 @@ camera.xml_query('command', option1=value1, ...)
 Sends a command to the camera, parses the XML result and returns the result as
 a Python `dict`. In case of an error it issues an error message and returns
 `None`. To obtain the AGPS expiration date as in the example above, we can call
-`camera.xml_query('get_agpsinfo')['expiredate']` to get the result `20221111` as
-a string.
+`camera.xml_query('get_agpsinfo')['expiredate']` to get the result `20221111`
+as a string.
 
 ```
 camera.set_clock()
@@ -254,7 +254,7 @@ camera.get_images()
 ```
 
 Returns a list of all images on the camera. For each each image there is the
-file name with directory path, the size in bytes, and the date and time in
+file name inculding directory path, the size in bytes, and the date and time in
 ISO format. 
 
 ```
