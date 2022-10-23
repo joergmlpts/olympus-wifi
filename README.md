@@ -12,7 +12,7 @@ to the camera.
 
 ## Connect Camera to Wifi
 
-The user's manual explains best how wifi mode is entered by a particular
+The user's manual explains best how wifi mode is entered for a particular
 Olympus camera. Generally, wifi needs to be enabled in the camera settings and
 set to "private". Then, to enter wifi mode, on a TG-5 press and hold the "Menu"
 button. Beside a QR code, the camera display shows its SSID (wireless
