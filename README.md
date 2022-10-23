@@ -197,7 +197,7 @@ propname=ArtEffectTypeLigneClair, propname=ArtEffectTypePastel, propname=ArtEffe
 These checks also work for commands:
 
 ```
-./olympus-camera.py --cmd whatever
+$ ./olympus-camera.py --cmd whatever
 Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 Error: command 'whatever' not supported; valid commands: get_commandlist, get_connectmode, switch_cammode, get_caminfo, exec_pwoff, get_resizeimg,
 get_movplaytime, clear_resvflg, get_rsvimglist, get_rsvimglist_ext, get_imglist, get_imglist_ext, get_thumbnail, get_screennail, get_movfileinfo,
