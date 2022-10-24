@@ -124,7 +124,7 @@ an XML document. This lengthy document can be saved to a file with redirection:
 ./olympus-camera.py --cmd "get_commandlist > commandlist.xml"
 ```
 
-#### Command with XML result
+#### Commands return XML results
 
 This command returns the day the AGPS data expires:
 
@@ -143,7 +143,7 @@ be updated by November 11th, 2022.
 
 #### List images
 
-Images on the camera can be accessed as well:
+Images on the camera can be listed as well:
 
 ```
 $ ./olympus-camera.py --cmd "get_imglist DIR=/DCIM/100OLYMP"
@@ -153,8 +153,11 @@ VER_100
 ```
 
 There is only one image. It is `PA220001.JPG` in directory `/DCIM/100OLYMP`. The
-image is a file of 2,514,746 bytes. We want to download a smaller version with
-command `get_resizeimg`:
+image is a file of 2,514,746 bytes. Note that this command returns a plain text
+result. `get_imglist` is one of only a few commands commands that return plain
+text instead of XML.
+
+We want to download a smaller version of the image with command `get_resizeimg`:
 
 #### Command with binary result
 
@@ -174,11 +177,11 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 ```
 and the image will be downloaded and saved to a file.
 
+#### Command restricted to a particular mode
+
 The TG-5 has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
 accepted in one of the modes. Command `switch_cammode` is called to switch
 modes.
-
-#### Command restricted to a particular mode
 
 ```
 $ ./olympus-camera.py --cmd "get_camprop com=get propname=takemode"
