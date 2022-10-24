@@ -92,7 +92,7 @@ the firewall settings and grant Python network access.
 ### Option --cmd CMD, -c CMD
 
 The option `--cmd` allows to send commands directly to the camera. Multiple
-options are often needed to be given as most commands work only in certain modes
+options are often need to be given as most commands work only in certain modes
 and the first command usually switches the mode.
 
 Arbitrary commands can be sent to the camera this way. In order to get started
