@@ -108,8 +108,7 @@ obtained as this:
 ```
 
 The command returns a list of all the supported commands and options in an XML
-document. This is a lengthy document can be saved to a file with
-redirection:
+document. This lengthy document can be saved to a file with redirection:
 
 ```
 ./olympus-camera.py --cmd "get_commandlist > commandlist.xml"
