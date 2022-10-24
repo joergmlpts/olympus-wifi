@@ -69,7 +69,7 @@ Turn camera off after executing the other commands.
 
 ### Option --set_clock, -c
 
-Set the camera clock to the current date and time.
+Set the camera clock to the current date, time, and time zone.
 
 ### Option --shoot, -S
 
@@ -100,6 +100,8 @@ with camera commands, [this spec](https://raw.githubusercontent.com/ccrome/olymp
 may be helpful. It explains a lot but not all its info applies to other
 camera models.
 
+#### Send a command
+
 The commands and command options that the connected camera supports, can be
 obtained as this:
 
@@ -107,12 +109,22 @@ obtained as this:
 ./olympus-camera.py --cmd get_commandlist
 ```
 
-The command returns a list of all the supported commands and options in an XML
-document. This lengthy document can be saved to a file with redirection:
+On Windows, you want to call Python with `olympus-camera.py` argument instead:
+
+```
+python.exe olympus-camera.py --cmd get_commandlist
+```
+
+#### Command with outout redirection
+
+The command returns a list of all the supported commands and options in form of
+an XML document. This lengthy document can be saved to a file with redirection:
 
 ```
 ./olympus-camera.py --cmd "get_commandlist > commandlist.xml"
 ```
+
+#### Command with XML result
 
 This command returns the day the AGPS data expires:
 
@@ -129,6 +141,8 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 The returned data is often XML. In this case, the camera's AGPS data needs to
 be updated by November 11th, 2022.
 
+#### List images
+
 Images on the camera can be accessed as well:
 
 ```
@@ -141,6 +155,8 @@ VER_100
 There is only one image. It is `PA220001.JPG` in directory `/DCIM/100OLYMP`. The
 image is a file of 2,514,746 bytes. We want to download a smaller version with
 command `get_resizeimg`:
+
+#### Command with binary result
 
 ```
 $ ./olympus-camera.py --cmd "get_resizeimg DIR=/DCIM/100OLYMP/PA220001.JPG size=1024"
@@ -162,6 +178,8 @@ The TG-5 has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
 accepted in one of the modes. Command `switch_cammode` is called to switch
 modes.
 
+#### Command restricted to a particular mode
+
 ```
 $ ./olympus-camera.py --cmd "get_camprop com=get propname=takemode"
 Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
@@ -179,6 +197,8 @@ Connected to Olympus TG-5, version 3.10, oitrackversion 2.20.
 
 The command does not error out anymore and we get the result.
 
+#### Command argument check
+
 The `--cmd` option checks commands and arguments before sending them to the
 camera. These checks are based on the data obtained with `get_commandlist`. When
 an argument is wrong, the error message includes a list of valid arguments:
@@ -193,6 +213,8 @@ propname=ArtEffectTypeToyPhoto, propname=ArtEffectTypeDaydream, propname=ArtEffe
 propname=ArtEffectTypeLigneClair, propname=ArtEffectTypePastel, propname=ArtEffectTypeMiniature, propname=ArtEffectTypeVintage, propname=ArtEffectTypePartcolor.
 ```
 
+#### Command name check
+
 These checks also work for commands:
 
 ```
@@ -206,8 +228,8 @@ get_gpsimglist, get_gpsrecordinglog, exec_gpslogfiling, check_snsrecording, get_
 exec_snslogfiling, exec_gpssnslogfiling, get_moviestreaminfo, ready_moviestream, start_moviestream, stop_moviestream, exit_moviestream.
 ```
 
-Your mileage may vary. The commands and command arguments likely differ across
-camera models.
+Your output may vary. The commands and command arguments differ from camera
+model to camera model.
 
 ## Python Code
 
