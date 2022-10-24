@@ -116,7 +116,7 @@ instead:
 python.exe olympus-camera.py --cmd get_commandlist
 ```
 
-#### Command with outout redirection
+#### Command with output redirection
 
 The command returns a list of all the supported commands and options in form of
 an XML document. This lengthy document can be saved to a file with redirection:
