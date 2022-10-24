@@ -109,7 +109,7 @@ obtained as this:
 ./olympus-camera.py --cmd get_commandlist
 ```
 
-On Windows, you want to call Python with `olympus-camera.py` as its argument
+On Windows, we need to call Python with `olympus-camera.py` as its argument
 instead:
 
 ```
