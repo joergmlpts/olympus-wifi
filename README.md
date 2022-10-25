@@ -293,16 +293,16 @@ Return the image thumbnail and the full image respectively.
 ## Dependencies
 
 This code has been written in Python 3. It relies on package `requests` to
-communicate with the camera, `dateutil` to convert the ISO date and time when
-downloading images and `PIL` to help show the live stream from the camera.
+communicate with the camera and `PIL` to help show the live stream from the
+camera.
 
 All necessary packages can be installed on Ubuntu Linux and likely many other
 Debian-style Linux distributions with this command:
 ```
-sudo apt install python3-dateutil python3-pil python3-requests
+sudo apt install python3-pil python3-requests
 ```
 
 On other platforms, `pip` may do the trick:
 ```
-pip install dateutil Pillow requests
+pip install Pillow requests
 ```

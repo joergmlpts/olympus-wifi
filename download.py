@@ -2,9 +2,7 @@
 
 from camera import OlympusCamera
 
-import os, sys
-
-from dateutil.parser import isoparse # on Ubuntu install with "apt install -y python3-dateutil"
+import datetime, os, sys
 
 
 ##############################################################################
@@ -32,7 +30,8 @@ def download_photos(camera: OlympusCamera, output_dir: str) -> None:
         msg_file = local_file.replace(os.path.expanduser('~'), '~')
 
         # Time in seconds since epoch.
-        tim_epoch = isoparse(cam_file.date_time).timestamp()
+        tim_epoch = datetime.datetime.strptime(cam_file.date_time,
+                                               '%Y-%m-%dT%H:%M:%S').timestamp()
 
         # Skip image download if local file already exists.
         if os.path.exists(local_file):
