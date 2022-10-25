@@ -1,6 +1,6 @@
-import datetime, os, sys, tkinter, time
+import datetime, os, sys, time
 import xml.etree.ElementTree as ElementTree
-from dataclasses import dataclass
+from dataclasses import dataclass   # needs Python 3.7 or later
 from typing import List, Dict, Optional, Set, Union
 
 import requests # on Ubuntu install with "apt install -y python3-requests"

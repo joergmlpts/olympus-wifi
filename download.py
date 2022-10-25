@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 from camera import OlympusCamera
-
 import datetime, os, sys
-
 
 ##############################################################################
 #    Function download_photos() downloads photos from the Olympus camera.    #
