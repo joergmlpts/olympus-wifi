@@ -1,6 +1,7 @@
 import datetime, os, sys, tkinter, time
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass
+from typing import List, Dict, Optional, Set, Union
 
 import requests # on Ubuntu install with "apt install -y python3-requests"
 
@@ -19,12 +20,12 @@ class OlympusCamera:
 
     @dataclass
     class CmdDescr:
-        method: str     # http-method 'get' or 'post'
-        args  : dict    # nested dicts of command's key-value args
+        method: str                       # http-method 'get' or 'post'
+        args  : Dict[str, Optional[dict]] # nested dicts of command's key-values
 
     @dataclass
     class FileDescr:
-        file_name: str  # e.g. "/DCIM/100OLYMP/P1010042.JPG"
+        file_name: str  # example "/DCIM/100OLYMP/P1010042.JPG"
         file_size: int  # in bytes
         date_time: str  # ISO date and time, no timezone
 
@@ -32,14 +33,14 @@ class OlympusCamera:
     HEADERS             = { 'Host'      : '192.168.0.10',
                             'User-Agent': 'OI.Share v2' }
 
-    ANY_PARAMETER       = '*'
-    EMPTY_PARAMETERS    = { ANY_PARAMETER: None }
+    ANY_PARAMETER                               = '*'
+    EMPTY_PARAMETERS: Dict[str, Optional[dict]] = { ANY_PARAMETER: None }
 
     def __init__(self):
-        self.versions = {}      # version data
-        self.supported = set()  # supported functionality
-        self.camera_info = {}   # includes camera model
-        self.commands = {       # dict { command: CmdDesc }
+        self.versions: Dict[str, str] = {}  # version data
+        self.supported: Set[str] = set()    # supported functionality
+        self.camera_info = None             # includes camera model
+        self.commands: Dict[str, CmdDescr] = {
             'get_commandlist': self.CmdDescr('get', None)
         }
 
@@ -76,7 +77,8 @@ class OlympusCamera:
         self.send_command('switch_cammode', mode='play')
 
     # Parse parameters in the XML output of command get_commandlist.
-    def commandlist_params(self, parent: ElementTree.Element) -> dict:
+    def commandlist_params(self, parent: ElementTree.Element) \
+                                                   -> Dict[str, Optional[dict]]:
         params = {}
         for param in parent:
             if param.tag.startswith('cmd'):
@@ -91,19 +93,20 @@ class OlympusCamera:
         return params if len(params) else self.EMPTY_PARAMETERS
 
     # Parse commands in the XML output of command get_commandlist.
-    def commandlist_cmds(self, parent: ElementTree.Element) -> dict:
-        cmds = {}
+    def commandlist_cmds(self, parent: ElementTree.Element) \
+                                         -> Optional[Dict[str, Optional[dict]]]:
+        cmds: Dict[str, Optional[dict]] = {}
         for cmd in parent:
             assert cmd.tag.startswith('cmd')
             cmds[cmd.attrib['name'].strip()] = self.commandlist_params(cmd)
         return cmds if cmds else None
 
     # Send command to camera; return Response object or None.
-    def send_command(self, command: str, **args) -> requests.Response:
+    def send_command(self, command: str, **args) -> Optional[requests.Response]:
 
         # Check command and args against what the camera supports.
         if not self.is_valid_command(command, args):
-            return
+            return None
 
         url = f'{self.URL_PREFIX}{command}.cgi'
         if self.commands[command].method == 'get':
@@ -115,10 +118,10 @@ class OlympusCamera:
                 del args['set_value']
             else:
                 print(f"Error in '{command}' with args "
-                      f"'{', '.join([y+'='+v for k, v in args.items()])}': "
+                      f"'{', '.join([k+'='+v for k, v in args.items()])}': "
                       "missing entry 'set_value' for method 'post'.",
                       file=sys.stderr)
-                return
+                return None
             headers = self.HEADERS.copy()
             headers['Content-Type'] = 'text/plain;charset=utf-8'
             xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
@@ -129,18 +132,20 @@ class OlympusCamera:
         if response.status_code in [requests.codes.ok, requests.codes.accepted]:
             return response
         else:
-            xml = self.xml_response(response)
-            if xml is not None and isinstance(xml, dict):
+            err_xml = self.xml_response(response)
+            if isinstance(err_xml, dict):
                 msg = ', '.join([f'{key}={value}'
-                                 for key, value in xml.items()])
+                                 for key, value in err_xml.items()])
             else:
                 msg = response.text.replace('\r\n','')
             print(f"Error #{response.status_code} "
                   f"for url '{response.url.replace('%2F','/')}': {msg}.",
                   file=sys.stderr)
+        return None
 
     # Check validity of command and arguments.
-    def is_valid_command(self, command: str, args: dict) -> bool:
+    def is_valid_command(self, command: str,
+                         args: Dict[str, CmdDescr]) -> bool:
 
         # Check command.
         if command not in self.commands:
@@ -190,27 +195,27 @@ class OlympusCamera:
 
     # Return a dict with version info; obtained from the camera
     # with command 'get_commandlist'.
-    def get_versions(self) -> dict:
+    def get_versions(self) -> Dict[str, str]:
         return self.versions
 
     # Return a set of supported funcs; obtained from the camera
     # with command 'get_commandlist'.
-    def get_supported(self) -> set:
+    def get_supported(self) -> Set[str]:
         return self.supported
 
     # Return a dict with an entry for 'model', the camera model.
-    def get_camera_info(self) -> dict:
+    def get_camera_info(self) -> Dict[str, str]:
         return self.camera_info
 
     # Return dict of permitted commands. Each command maps to an instance
     # of class CmdDescr which holds the HTTP-method ('get' or 'post') and
     # nested dicts that represent supported command arguments and their values;
     # obtained from the camera with command 'get_commandlist'.
-    def get_commands(self) -> dict:
+    def get_commands(self) -> Dict[str, CmdDescr]:
         return self.commands
 
     # Return dict of camera properties and list of their supported values.
-    def get_settable_propnames_and_values(self) -> dict:
+    def get_settable_propnames_and_values(self) -> Dict[str, List[str]]:
         return self.camprop_name2values
 
     # Get the value of camera property. A dict of all supported property
@@ -218,8 +223,10 @@ class OlympusCamera:
     #   get_commands()['get_camprop'].args['com']['get']['propname']
     def get_camprop(self, propname: str) -> str:
         self.send_command('switch_cammode', mode='rec')
-        return self.xml_query('get_camprop', com='get',
-                              propname=propname)['value']
+        result = self.xml_query('get_camprop', com='get',
+                              propname=propname)
+        assert isinstance(result, dict) and 'value' in result
+        return result['value']
 
     # Set the value of camera property. A dict of all supported property
     # names can be obtained with:
@@ -240,25 +247,28 @@ class OlympusCamera:
                           set_value=value)
 
     # Turn an XML response into a dict or a list of dicts.
-    def xml_response(self, response: requests.Response):
+    def xml_response(self, response: Optional[requests.Response]) -> \
+                          Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
         if response is not None:
             if 'Content-Type' in response.headers and \
                response.headers['Content-Type'] == 'text/xml':
                 xml = ElementTree.fromstring(response.text)
-                my_dict = {}
-                my_list = self.xml2dict(xml, my_dict)
+                my_dict: Dict[str, str] = {}
+                my_list: List[Dict[str, str]] = self.xml2dict(xml, my_dict)
                 if not my_list:
                     return my_dict
                 return my_list[0] if len(my_list) == 1 else my_list
+        return None
 
     # Resursively traverse XML and return a list of dicts.
-    def xml2dict(self, xml: ElementTree.Element, parent: dict) -> list:
+    def xml2dict(self, xml: ElementTree.Element, parent: Dict[str, str]) \
+                                                        -> List[Dict[str, str]]:
         if xml.text and xml.text.strip():
             parent[xml.tag] = xml.text.strip()
             return []
         else:
             results = []
-            params = {}
+            params: Dict[str, str] = {}
             for elem in xml:
                 results += self.xml2dict(elem, params)
             if params:
@@ -266,7 +276,8 @@ class OlympusCamera:
             return results
 
     # Send a command and return XML response as dict or list of dicts.
-    def xml_query(self, command: str, **args):
+    def xml_query(self, command: str, **args) -> \
+                          Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
         return self.xml_response(self.send_command(command, **args))
 
     # Set the camera clock to this computer's time and timezone.
@@ -287,7 +298,7 @@ class OlympusCamera:
 
     # Return list of instances of class FileDescr for a given directory
     # and all its subdirectories on the camera memory card.
-    def list_images(self, dir: str = '/DCIM') -> list:
+    def list_images(self, dir: str = '/DCIM') -> List[FileDescr]:
         result = self.send_command('get_imglist', DIR=dir)
         if result is None or result.status_code == 404: 
             return []
@@ -316,16 +327,15 @@ class OlympusCamera:
         return images
 
     # Returns a jpeg image.
-    def download_thumbnail(self, dir: str) -> bytes:
+    def download_thumbnail(self, dir: str) -> Optional[bytes]:
         result = self.send_command('get_thumbnail', DIR=dir)
-        if result is not None:
-            return result.content
+        return None if result is None else result.content
 
     # Returns full-size jpeg image.
-    def download_image(self, dir: str) -> bytes:
+    def download_image(self, dir: str) -> Optional[bytes]:
         response = requests.get(self.URL_PREFIX + dir[1:], headers=self.HEADERS)
-        if response.status_code == requests.codes.ok:
-            return response.content
+        return response.content if response.status_code == requests.codes.ok \
+                                else None
 
     # Start the liveview; the camera will broadcast an RTP live stream at the
     # given UDP port in the given resolution. Supported values for the
@@ -340,7 +350,7 @@ class OlympusCamera:
         self.send_command('exec_takemisc', com='stopliveview')
 
     # Report camera model and version info.
-    def report_model(self):
+    def report_model(self) -> None:
         if 'model' in self.get_camera_info():
             model = self.get_camera_info()['model']
             versions = ', '.join([f'{key} {value}' for key, value in

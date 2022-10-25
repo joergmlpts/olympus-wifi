@@ -4,6 +4,7 @@ from camera import OlympusCamera
 
 import datetime, io, os, queue, socket, sys, threading, tkinter, time
 from dataclasses import dataclass
+from typing import Tuple, Optional
 
 from PIL import Image, ImageTk # on Ubuntu install with "apt install -y python3-pil"
 
@@ -25,10 +26,10 @@ class LiveViewReceiver:
     MAX_QUEUE_SIZE = 50
 
     # A queue is passed, jpeg images will be added to this queue.
-    def __init__(self, img_queue: queue.Queue):
+    def __init__(self, img_queue: queue.SimpleQueue):
         self.running = True
         self.img_queue = img_queue
-        self.prev_sequence_number = None
+        self.prev_sequence_number = 0
         self.init_frame(valid=False)
 
     # Request showdown.
@@ -56,7 +57,7 @@ class LiveViewReceiver:
                 self.process_packet(packet)
 
     # Decodes an RTP packet and extracts marker, sequence number, and payload.
-    def decode_RTP(self, packet: bytes) -> None:
+    def decode_RTP(self, packet: bytes) -> Tuple[int, int, bytes]:
         # Based on: https://en.wikipedia.org/wiki/Real-time_Transport_Protocol
         version = packet[0] >> 6
         assert version == 2
@@ -95,7 +96,7 @@ class LiveViewReceiver:
     def init_frame(self, valid: bool=True) -> None:
         self.assembling_frame = valid
         self.frame = b''
-        self.extension = None
+        self.extension = b''
 
     # Assembles multiple packets into one frame. Calls process_frame with
     # each frame.
@@ -146,7 +147,7 @@ class LiveViewWindow:
         self.power_off = False
         self.camera = camera
         self.port = port
-        self.img_queue = queue.SimpleQueue()
+        self.img_queue: queue.SimpleQueue = queue.SimpleQueue()
         self.window = tkinter.Tk()
         self.width = self.height = None
         if 'model' in camera.get_camera_info():
@@ -155,8 +156,15 @@ class LiveViewWindow:
             self.window.title("LiveView")
 
         # Select largest entry in lvqty_list that still fits our screen.
-        self.lvqty_list = list(camera.get_commands()['switch_cammode'].args
-                               ['mode']['rec']['lvqty'])
+        self.lvqty_list = ['0640x0480']
+        if 'switch_cammode' in camera.get_commands():
+            args = camera.get_commands()['switch_cammode'].args
+            if args is not None and 'mode' in args:
+                args1 = args['mode']
+                if args1 is not None and 'rec' in args1:
+                    args2 = args1['rec']
+                    if args2 is not None and 'lvqty' in args2:
+                        self.lvqty_list = list(args2['lvqty'])
         self.lvqty_cur = 0
         width_height_min = min(self.window.winfo_screenwidth(),
                                self.window.winfo_screenheight())
@@ -170,18 +178,20 @@ class LiveViewWindow:
         # Collect camera properties for Settings menu.
         self.camprop_info = {}
         camera.send_command('switch_cammode', mode='rec')
-        for prop in camera.xml_query('get_camprop', com='desc',
-                                     propname='desclist'):
-            if prop['attribute'] != 'getset':
-                continue
-            values = prop['enum'].split()
-            index = values.index(prop['value'])
-            if index == -1:
-                continue
-            variable = tkinter.IntVar()
-            variable.trace_add('write', self.on_camprop)
-            self.camprop_info[str(variable)] = \
-                self.CamPropInfo(prop['propname'], values, index, variable)
+        cam_props = camera.xml_query('get_camprop', com='desc',
+                                     propname='desclist')
+        if isinstance(cam_props, list):
+            for prop in cam_props:
+                if prop['attribute'] != 'getset':
+                    continue
+                values = prop['enum'].split()
+                index = values.index(prop['value'])
+                if index == -1:
+                    continue
+                variable = tkinter.IntVar()
+                variable.trace_add('write', self.on_camprop)
+                self.camprop_info[str(variable)] = \
+                    self.CamPropInfo(prop['propname'], values, index, variable)
         camera.send_command('switch_cammode', mode='play')
 
         # Add menu bar.
@@ -227,19 +237,17 @@ class LiveViewWindow:
         thread.start()
 
         # Get first jpeg image.
-        img = self.next_image()
+        self.img = self.next_image()
 
         # Compute window size from image.
-        self.width = img.width()
-        self.height = img.height()
+        self.width = self.img.width()
+        self.height = self.img.height()
         self.window.geometry(f"{self.width}x{self.height}")
         self.window.configure(background='grey')
 
         # Make a window with image,
-        self.camimage = tkinter.Label(self.window, image=img)
-        self.camimage.image = img
-        del img
-        self.camimage.pack(side="bottom", fill="both", expand="yes")
+        self.camimage = tkinter.Label(self.window, image=self.img)
+        self.camimage.pack(side="bottom", fill="both", expand=1)
 
         # Show the window and enter main loop.
         self.window.after(self.UPDATE_INTERVAL, self.check_update_image)
@@ -302,7 +310,7 @@ class LiveViewWindow:
         if not self.img_queue.empty():
             img = self.next_image()
             self.camimage.configure(image=img)
-            self.camimage.image = img
+            self.img = img
             if img.width() != self.width or img.height() != self.height:
                 self.width = img.width()
                 self.height = img.height()
@@ -311,7 +319,7 @@ class LiveViewWindow:
 
     # Get orientation from RTP extension. Its values are the same as in EXIF:
     # 1 for 0°, 3 for 180°, 6 for 90° clockwise, and 8 for 270° clockwise.
-    def get_orientation(self, extension) -> int:
+    def get_orientation(self, extension) -> Optional[int]:
         idx = 0
         while idx < len(extension):
             func_id = (extension[idx] << 8) + extension[idx+1]
@@ -324,6 +332,7 @@ class LiveViewWindow:
 
             idx += length
         assert idx == len(extension)
+        return None
 
     # Set camera clock.
     def set_clock(self):

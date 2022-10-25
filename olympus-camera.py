@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+
 from camera import OlympusCamera
 from liveview import LiveViewWindow
 from download import download_photos
@@ -83,7 +85,7 @@ def user_command(camera: OlympusCamera, cmd: str) -> bool:
                 file.write(response.content)
         except Exception as e:
             print(f"Error writing to file '{outfile}': {str(e)}.",
-                  file=sys.sterr)
+                  file=sys.stderr)
             return True
     elif 'Content-Type' in response.headers and \
          response.headers['Content-Type'].startswith('text'):
