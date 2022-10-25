@@ -180,7 +180,7 @@ and the image will be downloaded and saved to a file.
 
 #### Command restricted to a particular mode
 
-The TG-5 has 3 modes, `play`, `rec`, and `shutter`. Many commands are only
+The TG-5 has 3 modes: `play`, `rec`, and `shutter`. Many commands are only
 accepted in one of the modes. Command `switch_cammode` is called to switch
 modes.
 
