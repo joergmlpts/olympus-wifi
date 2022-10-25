@@ -260,7 +260,7 @@ class OlympusCamera:
                 return my_list[0] if len(my_list) == 1 else my_list
         return None
 
-    # Resursively traverse XML and return a list of dicts.
+    # Recursively traverse XML and return a list of dicts.
     def xml2dict(self, xml: ElementTree.Element, parent: Dict[str, str]) \
                                                         -> List[Dict[str, str]]:
         if xml.text and xml.text.strip():

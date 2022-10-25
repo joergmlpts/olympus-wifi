@@ -3,7 +3,7 @@
 from camera import OlympusCamera
 
 import datetime, io, os, queue, socket, sys, threading, tkinter, time
-from dataclasses import dataclass
+from dataclasses import dataclass   # needs Python 3.7 or later
 from typing import Tuple, Optional
 
 from PIL import Image, ImageTk # on Ubuntu install with "apt install -y python3-pil"
