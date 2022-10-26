@@ -299,7 +299,7 @@ camera as well as `PIL` to help show the live stream from the camera.
 All necessary packages can be installed on Ubuntu Linux and likely many other
 Debian-style Linux distributions with this command:
 ```
-sudo apt install python3-tk python3-pil python3-requests
+sudo apt install python3-tk python3-pil python3-pil.imagetk python3-requests
 ```
 
 On other platforms, `pip` may do the trick:
