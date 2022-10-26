@@ -189,6 +189,7 @@ class LiveViewWindow:
                 if index == -1:
                     continue
                 variable = tkinter.IntVar()
+                variable.set(index)
                 variable.trace_add('write', self.on_camprop)
                 self.camprop_info[str(variable)] = \
                     self.CamPropInfo(prop['propname'], values, index, variable)
