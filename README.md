@@ -292,9 +292,9 @@ Return the image thumbnail and the full image respectively.
 
 ## Dependencies
 
-This code has been written in Python 3. It relies on package `requests` to
-communicate with the camera and `PIL` to help show the live stream from the
-camera.
+This code needs Python 3.7 or later as it uses class `SimpleQueue` and module
+`dataclasses`. This code relies on package `requests` to communicate with the
+camera as well as `PIL` to help show the live stream from the camera.
 
 All necessary packages can be installed on Ubuntu Linux and likely many other
 Debian-style Linux distributions with this command:
