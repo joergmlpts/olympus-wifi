@@ -27,9 +27,11 @@ def download_photos(camera: OlympusCamera, output_dir: str) -> None:
         # Local filename used in in messages.
         msg_file = local_file.replace(os.path.expanduser('~'), '~')
 
+        # Turn time into datetime object.
+        dt = datetime.datetime.strptime(cam_file.date_time, '%Y-%m-%dT%H:%M:%S')
+
         # Time in seconds since epoch.
-        tim_epoch = datetime.datetime.strptime(cam_file.date_time,
-                                               '%Y-%m-%dT%H:%M:%S').timestamp()
+        tim_epoch = dt.timestamp()
 
         # Skip image download if local file already exists.
         if os.path.exists(local_file):
@@ -64,7 +66,7 @@ def download_photos(camera: OlympusCamera, output_dir: str) -> None:
                 continue
 
             print(f"File '{cam_file.file_name}' of {cam_file.file_size:,} bytes"
-                  f" from {cam_file.date_time} downloaded to '{msg_file}'.")
+                  f" from {dt} downloaded to '{msg_file}'.")
 
             # Set local file's creation and modification time.
             os.utime(local_file, (tim_epoch, tim_epoch))
