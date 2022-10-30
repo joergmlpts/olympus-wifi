@@ -120,21 +120,20 @@ class OlympusCamera:
             response = requests.get(url, headers=self.HEADERS, params=args)
         else:
             assert self.commands[command].method == 'post'
-            if 'set_value' in args:
-                set_value = args['set_value']
-                del args['set_value']
+            if 'post_data' in args:
+                post_data = args['post_data']
+                del args['post_data']
             else:
                 print(f"Error in '{command}' with args "
                       f"'{', '.join([k+'='+v for k, v in args.items()])}': "
-                      "missing entry 'set_value' for method 'post'.",
+                      "missing entry 'post_data' for method 'post'.",
                       file=sys.stderr)
                 return None
             headers = self.HEADERS.copy()
-            headers['Content-Type'] = 'text/plain;charset=utf-8'
-            xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
-                  f'<value>{set_value}</value>\r\n</set>\r\n'
+            if len(post_data) > 6 and post_data[:6] == "<?xml ".encode('utf-8'):
+                headers['Content-Type'] = 'text/plain;charset=utf-8'
             response = requests.post(url, headers=headers, params=args,
-                                     data=xml.encode('utf-8'))
+                                     data=post_data)
 
         if response.status_code in [requests.codes.ok, requests.codes.accepted]:
             return response
@@ -166,7 +165,11 @@ class OlympusCamera:
         wildcard = self.ANY_PARAMETER
         for key, value in args.items():
 
-            if key == 'set_value' and self.commands[command].method == 'post':
+            if key == 'post_data' and self.commands[command].method == 'post':
+                if not isinstance(value, bytes):
+                    print(f"Error in {command}: data for method 'post' is of "
+                          f"type '{type(value)}'; type 'bytes' expected.")
+                    return False
                 continue
 
             # No (more) valid arguments?
@@ -250,8 +253,10 @@ class OlympusCamera:
                   file=sys.stderr)
             return
         self.send_command('switch_cammode', mode='rec')
+        set_value_xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
+                       f'<value>{value}</value>\r\n</set>\r\n'
         self.send_command('set_camprop', com='set', propname=propname,
-                          set_value=value)
+                          post_data=set_value_xml.encode('utf-8'))
 
     # Turn an XML response into a dict or a list of dicts.
     def xml_response(self, response: Optional[requests.Response]) -> \
