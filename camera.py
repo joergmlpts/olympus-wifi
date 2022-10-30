@@ -351,7 +351,7 @@ class OlympusCamera:
     # resolution can be queried with member function:
     #   get_commands()['switch_cammode'].args['mode']['rec']['lvqty']
     # Return the list of funcid names that will be in the RTP extension.
-    def start_liveview(self, port: int, lvqty: str) -> Optional[List[str]]:
+    def start_liveview(self, port: int, lvqty: str) -> List[str]:
         self.send_command('switch_cammode', mode='rec', lvqty=lvqty)
         xml = self.send_command('exec_takemisc', com='startliveview',
                                 port=port).text
@@ -359,6 +359,7 @@ class OlympusCamera:
             return [funcid.attrib['name']
                     for funcid in ElementTree.fromstring(xml)
                     if funcid.tag == 'funcid' and 'name' in funcid.attrib]
+        return []
 
     # Stop the liveview; the camera will no longer send the RTP live stream.
     def stop_liveview(self) -> None:
