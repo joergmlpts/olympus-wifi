@@ -350,17 +350,15 @@ class OlympusCamera:
     # given UDP port in the given resolution. Supported values for the
     # resolution can be queried with member function:
     #   get_commands()['switch_cammode'].args['mode']['rec']['lvqty']
-    # Return the list of funcid names that will be sent in the RTP extension.
-    def start_liveview(self, port: int, lvqty: str) -> List[str]:
+    # Return the list of funcid names that will be in the RTP extension.
+    def start_liveview(self, port: int, lvqty: str) -> Optional[List[str]]:
         self.send_command('switch_cammode', mode='rec', lvqty=lvqty)
         xml = self.send_command('exec_takemisc', com='startliveview',
                                 port=port).text
-        result: List[str] = []
         if xml and xml.startswith("<?xml "):
-            for funcid in ElementTree.fromstring(xml):
-                if funcid.tag == 'funcid' and 'name' in funcid.attrib:
-                    result.append(funcid.attrib['name'])
-        return result
+            return [funcid.attrib['name']
+                    for funcid in ElementTree.fromstring(xml)
+                    if funcid.tag == 'funcid' and 'name' in funcid.attrib]
 
     # Stop the liveview; the camera will no longer send the RTP live stream.
     def stop_liveview(self) -> None:
