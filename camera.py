@@ -13,11 +13,19 @@ from typing import List, Dict, Optional, Set, Union
 import requests # on Ubuntu install with "apt install -y python3-requests"
 
 
+class RequestError(Exception):
+    """ Error in camera command request. """
+
+class ResultError(Exception):
+    """ Error in camera command result; error returned by camera. """
+    def __init__(self, msg: str, response: requests.Response):
+        super().__init__(msg)
+        self.response = response
+
+
 ###############################################################################
 # Class OlympusCamera communicates with an Olympus camera via wifi. It needs  #
-# to run on a computer that is connected to the camera's wifi network. This   #
-# class queries the camera's supported commands, capabilities, and the camera #
-# model.                                                                      #
+# to run on a computer that is connected to the camera's wifi network.        #
 ###############################################################################
 
 class OlympusCamera:
@@ -109,11 +117,10 @@ class OlympusCamera:
         return cmds if cmds else None
 
     # Send command to camera; return Response object or None.
-    def send_command(self, command: str, **args) -> Optional[requests.Response]:
+    def send_command(self, command: str, **args) -> requests.Response:
 
         # Check command and args against what the camera supports.
-        if not self.is_valid_command(command, args):
-            return None
+        self.check_valid_command(command, args)
 
         url = f'{self.URL_PREFIX}{command}.cgi'
         if self.commands[command].method == 'get':
@@ -124,11 +131,9 @@ class OlympusCamera:
                 post_data = args['post_data']
                 del args['post_data']
             else:
-                print(f"Error in '{command}' with args "
-                      f"'{', '.join([k+'='+v for k, v in args.items()])}': "
-                      "missing entry 'post_data' for method 'post'.",
-                      file=sys.stderr)
-                return None
+                raise RequestError(f"Error in '{command}' with args "
+                          f"'{', '.join([k+'='+v for k, v in args.items()])}': "
+                          "missing entry 'post_data' for method 'post'.")
             headers = self.HEADERS.copy()
             if len(post_data) > 6 and post_data[:6] == "<?xml ".encode('utf-8'):
                 headers['Content-Type'] = 'text/plain;charset=utf-8'
@@ -144,20 +149,19 @@ class OlympusCamera:
                                  for key, value in err_xml.items()])
             else:
                 msg = response.text.replace('\r\n','')
-            print(f"Error #{response.status_code} "
-                  f"for url '{response.url.replace('%2F','/')}': {msg}.",
-                  file=sys.stderr)
-        return None
+            raise ResultError(f"Error #{response.status_code} "
+                              f"for url '{response.url.replace('%2F','/')}': "
+                              f"{msg}.", response)
 
     # Check validity of command and arguments.
-    def is_valid_command(self, command: str,
-                         args: Dict[str, CmdDescr]) -> bool:
+    def check_valid_command(self, command: str,
+                            args: Dict[str, CmdDescr]) -> None:
 
         # Check command.
         if command not in self.commands:
-            print(f"Error: command '{command}' not supported; valid commands: "
-                  f"{', '.join(list(self.commands))}.", file=sys.stderr)
-            return False
+            raise RequestError(f"Error: command '{command}' not supported; "
+                               "valid commands: "
+                               f"{', '.join(list(self.commands))}.")
 
         valid_command_arguments = self.commands[command].args
 
@@ -167,16 +171,15 @@ class OlympusCamera:
 
             if key == 'post_data' and self.commands[command].method == 'post':
                 if not isinstance(value, bytes):
-                    print(f"Error in {command}: data for method 'post' is of "
-                          f"type '{type(value)}'; type 'bytes' expected.")
-                    return False
+                    raise RequestError(f"Error in {command}: data for method "
+                                       f"'post' is of type '{type(value)}'; "
+                                       "type 'bytes' expected.")
                 continue
 
             # No (more) valid arguments?
             if valid_command_arguments is None:
-                print(f"Error in {command}: '{key}' in "
-                      f"{key}={value} not supported.", file=sys.stderr)
-                return False
+                raise RequestError(f"Error in {command}: '{key}' in "
+                                   f"{key}={value} not supported.")
 
             # Is key a valid argument?
             if key in valid_command_arguments:
@@ -184,11 +187,9 @@ class OlympusCamera:
             elif wildcard in valid_command_arguments:
                 valid_command_arguments = valid_command_arguments[wildcard]
             else:
-                print(f"Error in {command}: '{key}' in {key}={value} "
-                      "not supported; supported: "
-                      f"{', '.join(list(valid_command_arguments))}.",
-                      file=sys.stderr)
-                return False
+                raise RequestError(f"Error in {command}: '{key}' in "
+                                   f"{key}={value} not supported; supported: "
+                                 f"{', '.join(list(valid_command_arguments))}.")
 
             # Is value valid for key?
             if value in valid_command_arguments:
@@ -196,12 +197,9 @@ class OlympusCamera:
             elif wildcard in valid_command_arguments:
                 valid_command_arguments = valid_command_arguments[wildcard]
             else:
-                print(f"Error in {command}: '{value}' in {key}={value} "
-                      "not supported; supported: "
-                  f"{', '.join([key+'='+v for v in valid_command_arguments])}.",
-                      file=sys.stderr)
-                return False
-        return True
+                raise RequestError(f"Error in {command}: '{value}' in "
+                                   f"{key}={value} not supported; supported: "
+                  f"{', '.join([key+'='+v for v in valid_command_arguments])}.")
 
     # Return a dict with version info; obtained from the camera
     # with command 'get_commandlist'.
@@ -234,7 +232,7 @@ class OlympusCamera:
     def get_camprop(self, propname: str) -> str:
         self.send_command('switch_cammode', mode='rec')
         result = self.xml_query('get_camprop', com='get',
-                              propname=propname)
+                                propname=propname)
         assert isinstance(result, dict) and 'value' in result
         return result['value']
 
@@ -248,10 +246,9 @@ class OlympusCamera:
            value not in self.camprop_name2values[propname]:
             all_values = ', '.join([v for v in
                                     self.camprop_name2values[propname]])
-            print(f"Error: value '{value}' not supported for camera property "
-                  f"'{propname}'; supported values: {all_values}.",
-                  file=sys.stderr)
-            return
+            raise RequestError(f"Error: value '{value}' not supported for "
+                               f"camera property '{propname}'; supported "
+                               f"values: {all_values}.")
         self.send_command('switch_cammode', mode='rec')
         set_value_xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
                        f'<value>{value}</value>\r\n</set>\r\n'
@@ -259,22 +256,21 @@ class OlympusCamera:
                           post_data=set_value_xml.encode('utf-8'))
 
     # Turn an XML response into a dict or a list of dicts.
-    def xml_response(self, response: Optional[requests.Response]) -> \
+    def xml_response(self, response: requests.Response) -> \
                           Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
-        if response is not None:
-            if 'Content-Type' in response.headers and \
-               response.headers['Content-Type'] == 'text/xml':
-                xml = ElementTree.fromstring(response.text)
-                my_dict: Dict[str, str] = {}
-                my_list: List[Dict[str, str]] = self.xml2dict(xml, my_dict)
-                if not my_list:
-                    return my_dict
-                return my_list[0] if len(my_list) == 1 else my_list
+        if 'Content-Type' in response.headers and \
+           response.headers['Content-Type'] == 'text/xml':
+            xml = ElementTree.fromstring(response.text)
+            my_dict: Dict[str, str] = {}
+            my_list: List[Dict[str, str]] = self.xml2dict(xml, my_dict)
+            if not my_list:
+                return my_dict
+            return my_list[0] if len(my_list) == 1 else my_list
         return None
 
     # Recursively traverse XML and return a list of dicts.
-    def xml2dict(self, xml: ElementTree.Element, parent: Dict[str, str]) \
-                                                        -> List[Dict[str, str]]:
+    def xml2dict(self, xml: ElementTree.Element,
+                 parent: Dict[str, str])  -> List[Dict[str, str]]:
         if xml.text and xml.text.strip():
             parent[xml.tag] = xml.text.strip()
             return []
@@ -311,9 +307,12 @@ class OlympusCamera:
     # Return list of instances of class FileDescr for a given directory
     # and all its subdirectories on the camera memory card.
     def list_images(self, dir: str = '/DCIM') -> List[FileDescr]:
-        result = self.send_command('get_imglist', DIR=dir)
-        if result is None or result.status_code == 404: 
-            return []
+        try:
+            result = self.send_command('get_imglist', DIR=dir)
+        except ResultError as e:
+            if e.response.status_code == 404: # camera returns error 404
+                return []                     # for an empty directory
+            raise
         images = []
         for line in result.text.split('\r\n'):
             components = line.split(',')
@@ -339,23 +338,29 @@ class OlympusCamera:
         return images
 
     # Returns a jpeg image.
-    def download_thumbnail(self, dir: str) -> Optional[bytes]:
-        result = self.send_command('get_thumbnail', DIR=dir)
-        return None if result is None else result.content
+    def download_thumbnail(self, dir: str) -> bytes:
+        return self.send_command('get_thumbnail', DIR=dir).content
 
     # Returns full-size jpeg image.
-    def download_image(self, dir: str) -> Optional[bytes]:
-        response = requests.get(self.URL_PREFIX + dir[1:], headers=self.HEADERS)
-        return response.content if response.status_code == requests.codes.ok \
-                                else None
+    def download_image(self, dir: str) -> bytes:
+        return requests.get(self.URL_PREFIX + dir[1:],
+                            headers=self.HEADERS).content
 
     # Start the liveview; the camera will broadcast an RTP live stream at the
     # given UDP port in the given resolution. Supported values for the
     # resolution can be queried with member function:
     #   get_commands()['switch_cammode'].args['mode']['rec']['lvqty']
-    def start_liveview(self, port: int, lvqty: str) -> None:
+    # Return the list of funcid names that will be sent in the RTP extension.
+    def start_liveview(self, port: int, lvqty: str) -> List[str]:
         self.send_command('switch_cammode', mode='rec', lvqty=lvqty)
-        self.send_command('exec_takemisc', com='startliveview', port=port)
+        xml = self.send_command('exec_takemisc', com='startliveview',
+                                port=port).text
+        result: List[str] = []
+        if xml and xml.startswith("<?xml "):
+            for funcid in ElementTree.fromstring(xml):
+                if funcid.tag == 'funcid' and 'name' in funcid.attrib:
+                    result.append(funcid.attrib['name'])
+        return result
 
     # Stop the liveview; the camera will no longer send the RTP live stream.
     def stop_liveview(self) -> None:

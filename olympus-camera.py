@@ -2,10 +2,11 @@
 
 import sys
 
-from camera import OlympusCamera
+from camera import OlympusCamera, RequestError, ResultError
 from liveview import LiveViewWindow
 from download import download_photos
 
+from typing import Dict, Optional
 
 ######################################################################
 # Send user-supplied command to camera, supports output redirection. #
@@ -21,10 +22,10 @@ def user_command(camera: OlympusCamera, cmd: str) -> bool:
         print(f"Error in '{cmd}': no command found.", file=sys.stderr)
         return True
 
-    command = cmd_list[0] # command to send to camera
-    args = {}             # key-value arguments
-    outfile = None        # file name for output redirection
-    append  = False       # write or append to redirected output
+    command = cmd_list[0]         # command to send to camera
+    args: Dict[str, str] = {}     # key-value arguments
+    outfile: Optional[str] = None # file name for output redirection
+    append: bool = False          # write or append to redirected output
 
     idx = 1
     while idx < len(cmd_list):
@@ -73,12 +74,20 @@ def user_command(camera: OlympusCamera, cmd: str) -> bool:
         args[key] = val
         idx += 1
 
-    # Send command to camera
-    response = camera.send_command(command, **args)
+    # Send command to camera.
+    try:
 
-    if response is None:
+        response = camera.send_command(command, **args)
+
+    except RequestError as e:
+        print(e, file=sys.stderr)
         return True
 
+    except ResultError as e:
+        print(e, file=sys.stderr)
+        return True
+
+    # Redirect result to file or print it.
     if outfile:
         try:
             with open(outfile, 'ab' if append else 'wb') as file:
