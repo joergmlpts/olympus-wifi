@@ -288,7 +288,7 @@ class OlympusCamera:
                           Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
         return self.xml_response(self.send_command(command, **args))
 
-    # Set the camera clock to this computer's time and timezone.
+    # Set the camera clock to this computer's time.
     def set_clock(self) -> None:
         self.send_command('switch_cammode', mode='play')
         self.send_command('set_utctimediff', utctime=

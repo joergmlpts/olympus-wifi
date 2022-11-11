@@ -69,7 +69,7 @@ Turn camera off after executing the other commands.
 
 ### Option --set_clock, -c
 
-Set the camera clock to the current date, time, and time zone.
+Set the camera clock to the current date and time.
 
 ### Option --shoot, -S
 
