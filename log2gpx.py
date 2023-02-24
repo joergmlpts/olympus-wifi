@@ -115,7 +115,7 @@ if __name__ == '__main__':
                 return fn
         except:
             pass
-        raise ValueError(f"File '{fn}' cannot be read.")
+        raise argparse.ArgumentTypeError(f"File '{fn}' cannot be read.")
 
     parser = argparse.ArgumentParser()
     parser.add_argument("log", type=fileName, nargs='+',
