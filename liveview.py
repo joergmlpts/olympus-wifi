@@ -293,17 +293,22 @@ class LiveViewWindow:
 
     # This member function returns the next image from the queue.
     def next_image(self) -> ImageTk.PhotoImage:
-        jpeg_and_extension = self.img_queue.get()
-        orientation = self.get_orientation(jpeg_and_extension.extension)
-        if orientation is None or orientation == 1:
-            return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
-        with io.BytesIO(jpeg_and_extension.jpeg) as file:
-            img = Image.open(file)
-            img.load()
-        img = img.transpose(Image.ROTATE_180 if orientation == 3
-                            else Image.ROTATE_90 if orientation == 8
-                            else Image.ROTATE_270)
-        return ImageTk.PhotoImage(img)
+        while True:
+            try:
+                jpeg_and_extension = self.img_queue.get()
+                orientation = self.get_orientation(jpeg_and_extension.extension)
+                if orientation is None or orientation == 1:
+                    return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
+                with io.BytesIO(jpeg_and_extension.jpeg) as file:
+                    img = Image.open(file)
+                    img.load()
+                img = img.transpose(Image.ROTATE_180 if orientation == 3
+                                    else Image.ROTATE_90 if orientation == 8
+                                    else Image.ROTATE_270)
+                return ImageTk.PhotoImage(img)
+            except OSError as e:
+                print(f"Ignoring '{e}' and trying again.")
+                continue
 
     # A timer calls this member function periodically. It checks the queue
     # for a new image and if there is one updates the window.
