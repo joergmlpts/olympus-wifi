@@ -293,34 +293,34 @@ class LiveViewWindow:
 
     # This member function returns the next image from the queue.
     def next_image(self) -> ImageTk.PhotoImage:
-        while True:
-            try:
-                jpeg_and_extension = self.img_queue.get()
-                orientation = self.get_orientation(jpeg_and_extension.extension)
-                if orientation is None or orientation == 1:
-                    return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
-                with io.BytesIO(jpeg_and_extension.jpeg) as file:
-                    img = Image.open(file)
-                    img.load()
-                img = img.transpose(Image.ROTATE_180 if orientation == 3
-                                    else Image.ROTATE_90 if orientation == 8
-                                    else Image.ROTATE_270)
-                return ImageTk.PhotoImage(img)
-            except OSError as e:
-                print(f"Ignoring '{e}' and trying again.")
-                continue
+        jpeg_and_extension = self.img_queue.get()
+        orientation = self.get_orientation(jpeg_and_extension.extension)
+        if orientation is None or orientation == 1:
+            return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
+        with io.BytesIO(jpeg_and_extension.jpeg) as file:
+            img = Image.open(file)
+            img.load()
+        img = img.transpose(Image.ROTATE_180 if orientation == 3
+                            else Image.ROTATE_90 if orientation == 8
+                            else Image.ROTATE_270)
+        return ImageTk.PhotoImage(img)
 
     # A timer calls this member function periodically. It checks the queue
     # for a new image and if there is one updates the window.
     def check_update_image(self) -> None:
-        if not self.img_queue.empty():
-            img = self.next_image()
-            self.camimage.configure(image=img)
-            self.img = img
-            if img.width() != self.width or img.height() != self.height:
-                self.width = img.width()
-                self.height = img.height()
-                self.window.geometry(f"{self.width}x{self.height}")
+        while True:
+            if not self.img_queue.empty():
+                try:
+                    img = self.next_image()
+                    self.camimage.configure(image=img)
+                    self.img = img
+                    if img.width() != self.width or img.height() != self.height:
+                        self.width = img.width()
+                        self.height = img.height()
+                        self.window.geometry(f"{self.width}x{self.height}")
+                except OSError:
+                    continue
+            break
         self.window.after(self.UPDATE_INTERVAL, self.check_update_image)
 
     # Get orientation from RTP extension. Its values are the same as in EXIF:
