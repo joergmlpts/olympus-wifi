@@ -1,13 +1,19 @@
-#!/usr/bin/env python3
+import argparse, datetime, os, sys
+from .camera import OlympusCamera
 
-from camera import OlympusCamera
-import datetime, os, sys
 
 ##############################################################################
 #    Function download_photos() downloads photos from the Olympus camera.    #
 ##############################################################################
 
 def download_photos(camera: OlympusCamera, output_dir: str) -> None:
+    """
+    Function download_photos() downloads photos from the Olympus camera.
+
+    :param output_dir: local directory to write downloaded camera images to
+    :type output_dir: *str*
+    :returns: nothing; warnings are written to *stdout*
+    """
     for cam_file in camera.list_images():
         local_dir = os.path.join(os.path.expanduser('~'), 'Pictures',
                                  cam_file.date_time[:4]) if output_dir is None\
@@ -71,8 +77,11 @@ def download_photos(camera: OlympusCamera, output_dir: str) -> None:
             # Set local file's creation and modification time.
             os.utime(local_file, (tim_epoch, tim_epoch))
 
-if __name__ == '__main__':
-    import argparse
+def main() -> None:
+    """
+    Main program for script *olympus-download*. Parses command-line arguments
+    and calls APIs.
+    """
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', '-o', required=False, default=None,
@@ -99,3 +108,7 @@ if __name__ == '__main__':
     # Turn camera off if requested.
     if args.power_off:
         camera.send_command('exec_pwoff')
+
+
+if __name__ == '__main__':
+    main()

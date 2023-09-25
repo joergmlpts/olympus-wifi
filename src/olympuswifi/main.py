@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
-import sys
-
-from camera import OlympusCamera, RequestError, ResultError
-from liveview import LiveViewWindow
-from download import download_photos
-
+import argparse, sys
 from typing import Dict, Optional
+
+from .camera import OlympusCamera, RequestError, ResultError
+from .liveview import LiveViewWindow
+from .download import download_photos
+
 
 ######################################################################
 # Send user-supplied command to camera, supports output redirection. #
@@ -14,7 +12,16 @@ from typing import Dict, Optional
 
 # Returns True on error.
 def user_command(camera: OlympusCamera, cmd: str) -> bool:
+    """
+    Sends user-supplied command to camera, supports output redirection. Writes
+    error messages to *stderr* and returns *True* on error.
 
+    :param camera: connection to Olympus camera; instance of class *OlympusCamera*
+    :type camera: *OlympusCamera*
+    :param cmd: one command with optional output redirection
+    :type cmd: *str*
+    :returns: *True* on error, *False* otherwise
+    """
     # Parse command.
     cmd_list = cmd.strip().split(' ')
 
@@ -111,12 +118,11 @@ def user_command(camera: OlympusCamera, cmd: str) -> bool:
     return False
 
 
-#################################
-# Command-line argument parser. #
-#################################
-
-if __name__ == '__main__':
-    import argparse
+def main() -> None:
+    """
+    Main program for script *olympus-camera*. Parses command-line arguments
+    and calls APIs.
+    """
 
     PORT = 40000
 
@@ -169,3 +175,11 @@ if __name__ == '__main__':
     # Turn camera off if requested.
     if args.power_off:
         camera.send_command('exec_pwoff')
+
+
+#################################
+# Command-line argument parser. #
+#################################
+
+if __name__ == '__main__':
+    main()

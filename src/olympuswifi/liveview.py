@@ -1,12 +1,10 @@
-#!/usr/bin/env python3
-
-from camera import OlympusCamera
-
 import datetime, io, os, queue, socket, sys, threading, tkinter, time
 from dataclasses import dataclass   # needs Python 3.7 or later
 from typing import Tuple, Optional
 
 from PIL import Image, ImageTk # on Ubuntu install with "apt install -y python3-pil"
+
+from .camera import OlympusCamera
 
 
 ###########################################################################
@@ -15,30 +13,51 @@ from PIL import Image, ImageTk # on Ubuntu install with "apt install -y python3-
 ###########################################################################
 
 class LiveViewReceiver:
+    """
+    Class *LiveViewReceiver* receives the camera's live view and appends
+    it as sequence of JPEG images to a queue.
+
+    :param img_queue: instances of *JPEGandExtension* are appended to this queue
+    :type img_queue: *queue.SimpleQueue*
+    """
 
     @dataclass
     class JPEGandExtension:
-        jpeg      : bytes  # jpeg frame
-        extension : bytes  # RTP extension
+        """
+        This class stores a JPEG image and and RTP extension. Instances of
+        this class are appended to the queue. 
+        """
+        jpeg     : bytes
+        "JPEG image"
+        extension: bytes
+        "RTP extension"
 
     JPEG_START     = b'\xff\xd8'
+    "JPEG images start with this magic number"
     JPEG_END       = b'\xff\xd9'
+    "JPEG images end with this magic number"
     MAX_QUEUE_SIZE = 50
+    "The queue will not contain more than this many entries"
 
-    # A queue is passed, jpeg images will be added to this queue.
+    # A queue is passed, JEPG images will be added to this queue.
     def __init__(self, img_queue: queue.SimpleQueue):
         self.running = True
         self.img_queue = img_queue
         self.prev_sequence_number = 0
         self.init_frame(valid=False)
 
-    # Request showdown.
     def shut_down(self):
+        "Request showdown of this *LiveViewReceiver* thread."
         self.running = False
 
-    # This main loop receives RTP packets from the camera.
-    # It runs in a thread in parallel to the gui.
     def receive_packets(self, port: int) -> None:
+        """
+        This main loop receives RTP packets from the camera. It runs in
+        a thread in parallel to the gui.
+
+        :param port: port to listen to for RTP packages from the camera
+        :type port: int
+        """
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
             sock.bind(("", port))
             sock.settimeout(1) # A timeout terminates the loop below.
@@ -56,9 +75,17 @@ class LiveViewReceiver:
                     break
                 self.process_packet(packet)
 
-    # Decodes an RTP packet and extracts marker, sequence number, and payload.
     def decode_RTP(self, packet: bytes) -> Tuple[int, int, bytes]:
-        # Based on: https://en.wikipedia.org/wiki/Real-time_Transport_Protocol
+        """
+        Decodes an RTP packet stores extension in *self.extension* and extracts
+        marker, sequence number, and payload.
+
+        Based on: https://en.wikipedia.org/wiki/Real-time_Transport_Protocol
+
+        :param packet: packet received from camera consisting of JPEG image and RTP entension
+        :type packet: *bytes*
+        :returns: triple consisting of *marker*, *sequence_number*, and *payload*
+        """
         version = packet[0] >> 6
         assert version == 2
 
@@ -92,18 +119,28 @@ class LiveViewReceiver:
 
         return marker, sequence_number, payload
 
-    # Start a frame; called when marker bit seen.
     def init_frame(self, valid: bool=True) -> None:
+        """
+        Start a frame; called when marker bit seen.
+
+        :param valid: is frame valid; frames are valid when they have the expected sequence number
+        :type valid: bool
+        """
         self.assembling_frame = valid
         self.frame = b''
         self.extension = b''
 
-    # Assembles multiple packets into one frame. Calls process_frame with
-    # each frame.
     def process_packet(self, packet: bytes) -> None:
-        # Based on: https://stackoverflow.com/questions/7665217 where we are
-        # here dealing with MJPEG, not H264.
+        """
+        Assembles multiple packets into one frame. Calls *process_frame* with
+        each frame.
 
+        Based on: https://stackoverflow.com/questions/7665217 where we are
+        dealing here with MJPEG, not H264.
+
+        :param packet: packet received from camera consisting of JPEG image and RTP entension
+        :type packet: *bytes*
+        """
         # Extract payload, marker, and sequence number.
         marker, sequence_number, payload = self.decode_RTP(packet)
 
@@ -119,8 +156,14 @@ class LiveViewReceiver:
                 self.process_frame(self.frame)
             self.init_frame()
 
-    # Extracts jpeg image from frame and inserts it in queue.
     def process_frame(self, frame: bytes) -> None:
+        """
+        Appends frame - a JEPG image - and extension from *self.extension*
+        to queue.
+
+        :param frame: frame received from camera
+        :type frame: *bytes*
+        """
         if frame[:2] == self.JPEG_START and frame[-2:] == self.JPEG_END:
             while self.img_queue.qsize() >= self.MAX_QUEUE_SIZE:
                 # Take oldest frame from queue to make room.
@@ -133,15 +176,29 @@ class LiveViewReceiver:
 ##############################################################################
 
 class LiveViewWindow:
+    """
+    Class *LiveViewWindow* displays the camera's live view in a window.
+
+    :param camera: connection to Olympus camera; instance of class *OlympusCamera*
+    :type camera: *OlympusCamera*
+    :param port: port to listen to for RTP packages from the camera
+    :type port: *int*
+    """
 
     @dataclass
     class CamPropInfo:
-        name    : str            # camprop name
-        values  : list           # values, list of strings
-        cur_val : int            # current value, index into list of strings
-        variable: tkinter.IntVar # variable being watched for changes
+        "Information about a camera property."
+        name    : str
+        "camprop name"
+        values  : list
+        "values, list of strings"
+        cur_val : int
+        "current value, index into list of strings"
+        variable: tkinter.IntVar
+        "variable being watched for changes"
 
-    UPDATE_INTERVAL = 25 # msecs
+    UPDATE_INTERVAL = 25
+    "The queue is checked every this many milliseconds for a new frame."
 
     def __init__(self, camera: OlympusCamera, port: int = 40000):
         self.power_off = False
@@ -264,15 +321,19 @@ class LiveViewWindow:
             self.camera.send_command('switch_cammode', mode='play')
             self.camera.send_command('exec_pwoff')
 
-    # Take a picture.
     def take_pic(self) -> None:
+        "Take a picture."
         self.camera.stop_liveview()
         self.camera.take_picture()
         self.camera.start_liveview(port=self.port,
                                    lvqty=self.lvqty_list[self.lvqty_cur])
 
-    # Called when self.lvqty_var is written to.
     def on_lvqty(self, *args) -> None:
+        """
+        Called when *self.lvqty_var* is written to.
+
+        :param args: ignored
+        """
         if self.lvqty_cur != self.lvqty_var.get():
             self.lvqty_cur = self.lvqty_var.get()
             self.camera.stop_liveview()
@@ -280,8 +341,14 @@ class LiveViewWindow:
             self.camera.start_liveview(port=self.port,
                                        lvqty=self.lvqty_list[self.lvqty_cur])
 
-    # Called when a camprop variable is written to.
-    def on_camprop(self, var_name, *dummy) -> None:
+    def on_camprop(self, var_name: str, *dummy) -> None:
+        """
+        Called when a camprop variable is written to."
+
+        :param var_name: camera property name
+        :type var_name: str
+        :param dummy: ignored
+        """
         camprop = self.camprop_info[var_name]
         if camprop.cur_val != camprop.variable.get():
             camprop.cur_val = camprop.variable.get()
@@ -291,8 +358,12 @@ class LiveViewWindow:
             self.camera.start_liveview(port=self.port,
                                   lvqty=self.lvqty_list[self.lvqty_cur])
 
-    # This member function returns the next image from the queue.
     def next_image(self) -> ImageTk.PhotoImage:
+        """
+        This method returns the next image from the queue.
+
+        :returns: *ImageTk.PhotoImage*
+        """
         jpeg_and_extension = self.img_queue.get()
         orientation = self.get_orientation(jpeg_and_extension.extension)
         if orientation is None or orientation == 1:
@@ -305,9 +376,11 @@ class LiveViewWindow:
                             else Image.ROTATE_270)
         return ImageTk.PhotoImage(img)
 
-    # A timer calls this member function periodically. It checks the queue
-    # for a new image and if there is one updates the window.
     def check_update_image(self) -> None:
+        """
+        A timer calls this method periodically. It checks the queue
+        for a new image and if there is one updates the window.
+        """
         while True:
             if not self.img_queue.empty():
                 try:
@@ -323,9 +396,15 @@ class LiveViewWindow:
             break
         self.window.after(self.UPDATE_INTERVAL, self.check_update_image)
 
-    # Get orientation from RTP extension. Its values are the same as in EXIF:
-    # 1 for 0°, 3 for 180°, 6 for 90° clockwise, and 8 for 270° clockwise.
-    def get_orientation(self, extension) -> Optional[int]:
+    def get_orientation(self, extension: bytes) -> Optional[int]:
+        """
+        Get orientation from RTP extension. Its values are the same as in EXIF:
+        1 for 0°, 3 for 180°, 6 for 90° clockwise, and 8 for 270° clockwise.
+
+        :param extension: RTP extension
+        :type extension: bytes
+        :returns: 1, 3. 6, 8, or *None*.
+        """
         idx = 0
         while idx < len(extension):
             func_id = (extension[idx] << 8) + extension[idx+1]
@@ -340,22 +419,29 @@ class LiveViewWindow:
         assert idx == len(extension)
         return None
 
-    # Set camera clock.
     def set_clock(self):
+        """
+        Set camera clock.
+
+        The live view is stopped before setting the clock and restarted
+        afterwards.
+        """
         self.camera.stop_liveview()
         self.camera.set_clock()
         self.camera.start_liveview(port=self.port,
                                    lvqty=self.lvqty_list[self.lvqty_cur])
 
-    # Turn camera off and exit.
     def power_off_and_exit(self):
+        "Turn camera off and exit."
         self.power_off = True
         self.window.destroy()
 
 
-if __name__ == '__main__':
-    import argparse
-
+def main() -> None:
+    """
+    Main program for script *olympus-liveview*. Parses command-line arguments
+    and displays liveview window.
+    """
     PORT = 40000
 
     parser = argparse.ArgumentParser()
@@ -370,3 +456,8 @@ if __name__ == '__main__':
     camera.report_model()
 
     LiveViewWindow(camera, args.port)
+
+
+if __name__ == '__main__':
+    main()
+

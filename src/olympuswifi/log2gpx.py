@@ -1,24 +1,33 @@
-#!/usr/bin/env python3
-
-import os, sys
+import argparse, os, sys
 from dataclasses import dataclass
 from typing import List
 
-#
-# This script converts GPS tracks from an Olympus camera into gpx format.
-#
-# The camera saves GPS tracks as NMEA sentences to a file with extension .LOG.
-# File format described here: github.com/GPSBabel/gpsbabel/blob/master/nmea.cc
-#
+"""
+This script converts GPS tracks from an Olympus camera into gpx format.
+
+The camera saves GPS tracks as NMEA sentences to a file with extension .LOG.
+File format described `here <github.com/GPSBabel/gpsbabel/blob/master/nmea.cc>`_.
+"""
 
 @dataclass
 class TrackPoint:
+    """
+    Single point of a GPS Track. Tracks are represented as lists
+    of *TrackPoint*.
+    """
     latitude : float
     longitude: float
     elevation: str
     iso_time : str
 
 def read_log(fn: str) -> List[TrackPoint]:
+    """
+    Read an Olympus .LOG file and return a list of *TrackPoint*.
+
+    :param fn: File name to read.
+    :type fn: *str*
+    :returns: list of *TrackPoint*; empty list when file does not contain a GPS track
+    """
     result = []
     line_no = 0
     with open(fn, 'rt') as f:
@@ -80,6 +89,15 @@ def read_log(fn: str) -> List[TrackPoint]:
     return result
 
 def write_gpx(fn: str, track: List[TrackPoint]) -> None:
+    """
+    Write a list of *TrackPoint* to a .gpx file.
+
+    :param fn: File name to write.
+    :type fn: *str*
+    :param track: list of instances of class *TrackPoint*
+    :type track: *List[TrackPoint]*
+    :returns: list of *TrackPoint*
+    """
     with open(fn, 'wt') as f:
         print('<?xml version="1.0" encoding="utf-8" standalone="yes"?>',
               file=f)
@@ -105,13 +123,22 @@ def write_gpx(fn: str, track: List[TrackPoint]) -> None:
         print('</trk>', file=f)
         print('</gpx>', file=f)
 
-
-if __name__ == '__main__':
-    import argparse
+def main() -> None:
+    """
+    Main program for script *olympus-log2gpx*. Parses command-line arguments
+    and converts GPS log.
+    """
 
     def fileName(fn):
+        """
+        Is argument *fn* a valid filename?
+
+        :param fn: Command line argument.
+        :type fn: *str*
+        :raises: *argparse.ArgumentTypeError* if *fn* is not a valid filename
+        """
         try:
-            with open(fn, 'r') as f:
+            with open(fn, 'rt') as f:
                 return fn
         except:
             pass
@@ -130,3 +157,7 @@ if __name__ == '__main__':
             outfn = os.path.splitext(fn)[0] + '.gpx'
             print(f"Converting '{fn} to '{outfn}'.")
             write_gpx(outfn, track)
+
+
+if __name__ == '__main__':
+    main()

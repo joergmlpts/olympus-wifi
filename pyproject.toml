@@ -1,0 +1,43 @@
+[project]
+name = 'olympuswifi'
+version = '0.9.0'
+authors = [
+  { name='joergmlpts', email='joergmlpts@outlook.com' },
+]
+description = 'Connect to wifi-enabled Olympus camera, show liveview, set the clock, take pictures, download images, change settings, turn it off.'
+readme = 'README.md'
+requires-python = '>=3.7'
+classifiers = [
+  'Development Status :: 5 - Production/Stable',
+  'Intended Audience :: Developers',
+  'Intended Audience :: End Users/Desktop',
+  'License :: OSI Approved :: MIT License',
+  'Operating System :: POSIX',
+  'Programming Language :: Python',
+  'Programming Language :: Python :: 3',
+  'Programming Language :: Python :: 3 :: Only',
+  'Programming Language :: Python :: 3.7',
+  'Programming Language :: Python :: 3.8',
+  'Programming Language :: Python :: 3.9',
+  'Programming Language :: Python :: 3.10',
+  'Programming Language :: Python :: 3.11',
+  'Programming Language :: Python :: 3.12',
+  'Programming Language :: Python :: 3.13',
+]
+dependencies = ['Pillow', 'requests']
+keywords = ['camera', 'wifi', 'olympus', 'liveview']
+
+[project.scripts]
+olympus-camera = 'olympuswifi.main:main'
+olympus-liveview = 'olympuswifi.liveview:main'
+olympus-download = 'olympuswifi.download:main'
+olympus-log2gpx = 'olympuswifi.log2gpx:main'
+
+[project.urls]
+'Documentation' = 'https://olympus-wifi.readthedocs.org'
+'Homepage' = 'https://github.com/joergmlpts/olympus-wifi'
+'Bug Tracker' = 'https://github.com/joergmlpts/olympus-wifi/issues'
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
