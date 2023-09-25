@@ -28,7 +28,7 @@ intersphinx_disabled_domains = ['std']
 
 templates_path = ['_templates']
 
-autodoc_mock_imports = ['pil', 'requests']
+autodoc_mock_imports = ['PIL', 'requests']
 
 # -- Options for HTML output
 
