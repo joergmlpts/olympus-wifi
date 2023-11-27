@@ -111,7 +111,12 @@ class OlympusCamera:
                 self.versions[elem.tag] = elem.text.strip()
 
         # Issue get-camera-info command. It returns the camera model.
-        self.camera_info = self.xml_query('get_caminfo')
+        info = self.xml_query('get_caminfo')
+        if isinstance(info, list):
+            # flatten list of dicts
+            self.camera_info = { k: v for dct in info for k, v in dct.items() }
+        else:
+            self.camera_info = info
 
         # Get lists of supported values for writable camera properties.
         self.send_command('switch_cammode', mode='rec')
@@ -360,7 +365,7 @@ class OlympusCamera:
         :type xml: * ElementTree.Element*
         :param parent: parent directory
         :type parent: *Dict[str, str]*
-        :returns: *Dict[str,str]*, *List[Dict[str,str]]*, or *None*
+        :returns: *Dict[str,str]* or *List[Dict[str,str]]*
         """
         if xml.text and xml.text.strip():
             parent[xml.tag] = xml.text.strip()
@@ -509,6 +514,10 @@ class OlympusCamera:
             print(f"Connected to Olympus {model}, {versions}.")
 
 class EM10Mk4(OlympusCamera):
+    """
+    Pull request `Add em10mk4 #3 <https://github.com/joergmlpts/olympus-wifi/pull/3>`_
+    """
+
     def take_picture(self) -> None:
         """
         The camera takes a picture.
@@ -523,17 +532,4 @@ class EM10Mk4(OlympusCamera):
         time.sleep(0.5)
         self.send_command('exec_takemotion', com='stoptake')
 
-    def report_model(self) -> None:
-        """
-        Report camera model and version info.
-
-        :returns: Nothing; the camera model and version are written to *stdout*.
-        """
-
-        info = self.get_camera_info()
-        model = info[2]['model']
-
-        if 'model' == 'E-M10MarkIV':
-            versions = ', '.join([f'{key} {value}' for key, value in
-                                  self.get_versions().items()])
-            print(f"Connected to Olympus {model}, {versions}.")
+        # TODO turn liveview off, consider calling stop_liveview() here.
