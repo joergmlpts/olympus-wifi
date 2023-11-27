@@ -5,7 +5,7 @@ def long_description() -> str:
     with open('README.md', 'rt', encoding='utf-8') as f:
         return f.read()
 
-setup(name='inattrails',
+setup(name='olympuswifi',
       version='0.9.1',
       package_dir={'olympuswifi': 'src/olympuswifi'},
       packages=['olympuswifi'],
