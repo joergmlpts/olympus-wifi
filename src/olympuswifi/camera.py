@@ -507,3 +507,33 @@ class OlympusCamera:
             versions = ', '.join([f'{key} {value}' for key, value in
                                   self.get_versions().items()])
             print(f"Connected to Olympus {model}, {versions}.")
+
+class EM10Mk4(OlympusCamera):
+    def take_picture(self) -> None:
+        """
+        The camera takes a picture.
+        """
+
+        self.send_command('switch_cammode', mode='rec')
+        time.sleep(0.5)
+        self.send_command('exec_takemisc', com='startliveview', port='5555')
+        time.sleep(0.5)
+
+        self.send_command('exec_takemotion', com='starttake')
+        time.sleep(0.5)
+        self.send_command('exec_takemotion', com='stoptake')
+
+    def report_model(self) -> None:
+        """
+        Report camera model and version info.
+
+        :returns: Nothing; the camera model and version are written to *stdout*.
+        """
+
+        info = self.get_camera_info()
+        model = info[2]['model']
+
+        if 'model' == 'E-M10MarkIV':
+            versions = ', '.join([f'{key} {value}' for key, value in
+                                  self.get_versions().items()])
+            print(f"Connected to Olympus {model}, {versions}.")
