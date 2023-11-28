@@ -274,6 +274,13 @@ class OlympusCamera:
         """
         return self.camera_info
 
+    def get_camera_model(self) -> str:
+        """
+        Return the camera model.
+        """
+        model = self.get_camera_info().get('model')
+        return 'unknown model' if model is None else model
+
     def get_commands(self) -> Dict[str, CmdDescr]:
         """
         Return dict of permitted commands. Each command maps to an instance
@@ -507,11 +514,10 @@ class OlympusCamera:
 
         :returns: Nothing; the camera model and version are written to *stdout*.
         """
-        if 'model' in self.get_camera_info():
-            model = self.get_camera_info()['model']
-            versions = ', '.join([f'{key} {value}' for key, value in
-                                  self.get_versions().items()])
-            print(f"Connected to Olympus {model}, {versions}.")
+        model = self.get_camera_model()
+        versions = ', '.join([f'{key} {value}' for key, value in
+                              self.get_versions().items()])
+        print(f"Connected to Olympus {model}, {versions}.")
 
 class EM10Mk4(OlympusCamera):
     """
