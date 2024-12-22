@@ -1,4 +1,4 @@
-import argparse, datetime, io, os, queue, socket, sys, threading, tkinter, time
+import argparse, io, queue, socket, threading, tkinter
 from dataclasses import dataclass   # needs Python 3.7 or later
 from typing import Tuple, Optional
 
@@ -364,7 +364,13 @@ class LiveViewWindow:
 
         :returns: *ImageTk.PhotoImage*
         """
-        jpeg_and_extension = self.img_queue.get()
+        try:
+            jpeg_and_extension = self.img_queue.get(timeout=4.0)
+        except queue.Empty as e:
+            e.add_note("No data could be fetched within 4s.")
+            raise TimeoutError("Timeout while waiting for imagedata from camera. Maybe you need to check your "
+                               "firewall settings for incoming UDP traffic (from 192.168.0.10).") from e
+
         orientation = self.get_orientation(jpeg_and_extension.extension)
         if orientation is None or orientation == 1:
             return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
