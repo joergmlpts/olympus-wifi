@@ -2,6 +2,8 @@ import datetime, os, sys, time
 
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass   # needs Python 3.7 or later
+from enum import Enum
+from threading import Semaphore
 from typing import List, Dict, Optional, Set, Union
 
 import requests # on Ubuntu install with "apt install -y python3-requests"
@@ -52,6 +54,12 @@ class OlympusCamera:
     queried for its list of supported commands and their arguments.
     """
 
+    class CamMode(Enum):
+        UNKNOWN     = None
+        RECORD      = "rec"
+        PLAY        = "play"
+        SHUTTER     = "shutter"
+
     @dataclass
     class CmdDescr:
         "Description of a single camera command."
@@ -70,6 +78,15 @@ class OlympusCamera:
         date_time: str
         "ISO date and time, no timezone"
 
+    @dataclass
+    class CamStatus:
+        cammode_current: Enum       # Currently selected mode of operation
+        liveview_active: bool       # Is live view active?
+        liveview_restart: bool      # Restart liveview after action?
+        liveview_lvqty: str         # Last resolution used for liveview
+        liveview_port: int
+        execution_lock: Semaphore   # Used for exclusive access during command execution
+
     URL_PREFIX          = "http://192.168.0.10/"
     """
     This is the camera's URL when the computer is connected to
@@ -83,11 +100,14 @@ class OlympusCamera:
 
     ANY_PARAMETER                               = '*'
     EMPTY_PARAMETERS: Dict[str, Optional[dict]] = { ANY_PARAMETER: None }
+    DEFAULT_PORT = 40000
+    DEFAULT_RES = "0640x0480"
 
     def __init__(self):
         self.versions: Dict[str, str] = {}  # version data
         self.supported: Set[str] = set()    # supported functionality
         self.camera_info = None             # includes camera model
+        self._camera_status = OlympusCamera.CamStatus(self.CamMode.UNKNOWN, False, False, self.DEFAULT_RES, self.DEFAULT_PORT, Semaphore())
         self.commands: Dict[str, CmdDescr] = {
             'get_commandlist': self.CmdDescr('get', None)
         }
@@ -127,7 +147,7 @@ class OlympusCamera:
         }
 
         # Switch to mode 'play'.
-        self.send_command('switch_cammode', mode='play')
+        self._switch_cammode(self.CamMode.PLAY)
 
     def commandlist_params(self, parent: ElementTree.Element) \
                                                    -> Dict[str, Optional[dict]]:
@@ -196,6 +216,36 @@ class OlympusCamera:
             raise ResultError(f"Error #{response.status_code} "
                               f"for url '{response.url.replace('%2F','/')}': "
                               f"{msg}.", response)
+
+    # Managed switch to a new cammode
+    def _switch_cammode(self, cammode: CamMode, force=False, ** args) -> bool:
+        if (self._camera_status.cammode_current.value != cammode.value or force) and cammode != self.CamMode.UNKNOWN:
+            self.send_command('switch_cammode', mode=cammode.value, **args)
+            self._camera_status.cammode_current = cammode
+            self._camera_status.liveview_active = False
+        return True # TODO Check if really successful
+
+    def _action_begin(self, cammode: CamMode, force=False, ** args)  -> bool:
+        """
+        Handles the temporary switch to a different cameramode during the execution of
+        a requested command while maintaining the current mode of operation.
+        :param cammode: required cammode for the following operation
+        :param force: Force a switch to the cammode even if camera already uses this mode
+        :param args: additional arguments for the cammode switch command e.g. lvqty
+        """
+        if self._camera_status.execution_lock.acquire(timeout=10):
+            self._camera_status.liveview_restart = self._camera_status.liveview_active
+            if self._switch_cammode(cammode, force, **args):
+                return True
+            else:
+                self._camera_status.execution_lock.release()
+        return False
+
+    def _action_end(self) -> None:
+        self._camera_status.execution_lock.release()
+        if self._camera_status.liveview_restart and not self._camera_status.liveview_active:
+            self.start_liveview(self._camera_status.liveview_port, self._camera_status.liveview_lvqty)
+
 
     # Check validity of command and arguments.
     def check_valid_command(self, command: str,
@@ -308,11 +358,13 @@ class OlympusCamera:
         :raises: raises *RequestError* if not a valid camera property
         :returns: value of *propname*
         """
-        self.send_command('switch_cammode', mode='rec')
-        result = self.xml_query('get_camprop', com='get',
-                                propname=propname)
-        assert isinstance(result, dict) and 'value' in result
-        return result['value']
+        if self._action_begin(self.CamMode.RECORD):
+            result = self.xml_query('get_camprop', com='get',
+                                    propname=propname)
+            self._action_end()
+            assert isinstance(result, dict) and 'value' in result
+            return result['value']
+        return ""
 
     def set_camprop(self, propname: str, value: str) -> None:
         """
@@ -338,11 +390,12 @@ class OlympusCamera:
             raise RequestError(f"Error: value '{value}' not supported for "
                                f"camera property '{propname}'; supported "
                                f"values: {all_values}.")
-        self.send_command('switch_cammode', mode='rec')
-        set_value_xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
-                       f'<value>{value}</value>\r\n</set>\r\n'
-        self.send_command('set_camprop', com='set', propname=propname,
-                          post_data=set_value_xml.encode('utf-8'))
+        if self._action_begin(self.CamMode.RECORD):
+            set_value_xml = '<?xml version="1.0"?>\r\n<set>\r\n' \
+                           f'<value>{value}</value>\r\n</set>\r\n'
+            self.send_command('set_camprop', com='set', propname=propname,
+                              post_data=set_value_xml.encode('utf-8'))
+            self._action_end()
 
     def xml_response(self, response: requests.Response) -> \
                           Optional[Union[Dict[str, str], List[Dict[str, str]]]]:
@@ -403,21 +456,32 @@ class OlympusCamera:
         """
         Set the camera clock to this computer's time.
         """
-        self.send_command('switch_cammode', mode='play')
-        self.send_command('set_utctimediff', utctime=
-                          datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S"),
-                          diff=time.strftime("%z"))
+        if self._action_begin(self.CamMode.PLAY):
+            self.send_command('set_utctimediff', utctime=
+                              datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%S"),
+                              diff=time.strftime("%z"))
+            self._action_end()
 
     def take_picture(self) -> None:
         """
         The camera takes a picture.
         """
-        self.send_command('switch_cammode', mode='shutter')
-        time.sleep(0.5)
-        self.send_command('exec_shutter', com='1st2ndpush')
-        time.sleep(0.5)
-        self.send_command('exec_shutter', com='2nd1strelease')
-        self.send_command('switch_cammode', mode='play')
+        if self.get_camera_model().lower() == "e-m10markiv":
+            if self._action_begin(self.CamMode.RECORD):
+                if not self._camera_status.liveview_active:
+                    self.start_liveview(self.DEFAULT_PORT, self._camera_status.liveview_lvqty)
+                    self.send_command('exec_takemotion', com='starttake')
+                    self.stop_liveview()
+                else:
+                    self.send_command('exec_takemotion', com='starttake')
+                self._action_end()
+        else:
+            if self._action_begin(self.CamMode.SHUTTER):
+                time.sleep(0.5)
+                self.send_command('exec_shutter', com='1st2ndpush')
+                time.sleep(0.5)
+                self.send_command('exec_shutter', com='2nd1strelease')
+                self._action_end()
 
     def list_images(self, dir: str = '/DCIM') -> List[FileDescr]:
         """
@@ -493,20 +557,29 @@ class OlympusCamera:
         :type lvqty: *str*
         :returns: list of funcid names that will be in the RTP extension.
         """
-        self.send_command('switch_cammode', mode='rec', lvqty=lvqty)
-        xml = self.send_command('exec_takemisc', com='startliveview',
-                                port=port).text
-        if xml and xml.startswith("<?xml "):
-            return [funcid.attrib['name']
-                    for funcid in ElementTree.fromstring(xml)
-                    if funcid.tag == 'funcid' and 'name' in funcid.attrib]
+        if self._action_begin(cammode=self.CamMode.RECORD, force=True, lvqty=lvqty):
+            self._camera_status.liveview_lvqty = lvqty
+            self._camera_status.liveview_port = port
+            xml = self.send_command('exec_takemisc', com='startliveview',
+                                    port=port).text
+            self._camera_status.liveview_active = True
+            self._action_end()
+            if xml and xml.startswith("<?xml "):
+                return [funcid.attrib['name']
+                        for funcid in ElementTree.fromstring(xml)
+                        if funcid.tag == 'funcid' and 'name' in funcid.attrib]
         return []
 
     def stop_liveview(self) -> None:
         """
         Stop the liveview; the camera will no longer send the RTP live stream.
         """
-        self.send_command('exec_takemisc', com='stopliveview')
+        if self._camera_status.liveview_active:
+            if self._action_begin(self.CamMode.RECORD):
+                self.send_command('exec_takemisc', com='stopliveview')
+                self._camera_status.liveview_active = False
+                self._camera_status.liveview_restart = False
+                self._action_end()
 
     def report_model(self) -> None:
         """
@@ -518,24 +591,3 @@ class OlympusCamera:
         versions = ', '.join([f'{key} {value}' for key, value in
                               self.get_versions().items()])
         print(f"Connected to Olympus {model}, {versions}.")
-
-class EM10Mk4(OlympusCamera):
-    """
-    Pull request `Add em10mk4 #3 <https://github.com/joergmlpts/olympus-wifi/pull/3>`_
-    """
-
-    def take_picture(self) -> None:
-        """
-        The camera takes a picture.
-        """
-
-        self.send_command('switch_cammode', mode='rec')
-        time.sleep(0.5)
-        self.send_command('exec_takemisc', com='startliveview', port='5555')
-        time.sleep(0.5)
-
-        self.send_command('exec_takemotion', com='starttake')
-        time.sleep(0.5)
-        self.send_command('exec_takemotion', com='stoptake')
-
-        # TODO turn liveview off, consider calling stop_liveview() here.
