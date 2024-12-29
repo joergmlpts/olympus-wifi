@@ -323,10 +323,7 @@ class LiveViewWindow:
 
     def take_pic(self) -> None:
         "Take a picture."
-        self.camera.stop_liveview()
         self.camera.take_picture()
-        self.camera.start_liveview(port=self.port,
-                                   lvqty=self.lvqty_list[self.lvqty_cur])
 
     def on_lvqty(self, *args) -> None:
         """
@@ -337,7 +334,6 @@ class LiveViewWindow:
         if self.lvqty_cur != self.lvqty_var.get():
             self.lvqty_cur = self.lvqty_var.get()
             self.camera.stop_liveview()
-            self.camera.send_command('switch_cammode', mode='play')
             self.camera.start_liveview(port=self.port,
                                        lvqty=self.lvqty_list[self.lvqty_cur])
 
@@ -352,11 +348,8 @@ class LiveViewWindow:
         camprop = self.camprop_info[var_name]
         if camprop.cur_val != camprop.variable.get():
             camprop.cur_val = camprop.variable.get()
-            self.camera.stop_liveview()
             self.camera.set_camprop(camprop.name,
                                     camprop.values[camprop.cur_val])
-            self.camera.start_liveview(port=self.port,
-                                  lvqty=self.lvqty_list[self.lvqty_cur])
 
     def next_image(self) -> ImageTk.PhotoImage:
         """
@@ -432,10 +425,7 @@ class LiveViewWindow:
         The live view is stopped before setting the clock and restarted
         afterwards.
         """
-        self.camera.stop_liveview()
         self.camera.set_clock()
-        self.camera.start_liveview(port=self.port,
-                                   lvqty=self.lvqty_list[self.lvqty_cur])
 
     def power_off_and_exit(self):
         "Turn camera off and exit."

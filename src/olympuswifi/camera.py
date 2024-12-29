@@ -577,6 +577,7 @@ class OlympusCamera:
         if self._camera_status.liveview_active:
             if self._action_begin(self.CamMode.RECORD):
                 self.send_command('exec_takemisc', com='stopliveview')
+                self._switch_cammode(self.CamMode.PLAY)
                 self._camera_status.liveview_active = False
                 self._camera_status.liveview_restart = False
                 self._action_end()
