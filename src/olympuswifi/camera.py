@@ -557,7 +557,8 @@ class OlympusCamera:
         :type lvqty: *str*
         :returns: list of funcid names that will be in the RTP extension.
         """
-        if self._action_begin(cammode=self.CamMode.RECORD, force=True, lvqty=lvqty):
+        if self._action_begin(self.CamMode.PLAY):
+            self._switch_cammode(cammode=self.CamMode.RECORD, lvqty=lvqty)
             self._camera_status.liveview_lvqty = lvqty
             self._camera_status.liveview_port = port
             xml = self.send_command('exec_takemisc', com='startliveview',
