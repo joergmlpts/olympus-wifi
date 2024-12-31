@@ -80,7 +80,7 @@ class OlympusCamera:
 
     @dataclass
     class CamStatus:
-        cammode_current: CamMode    # Currently selected mode of operation
+        cammode_current: Enum       # Currently selected mode of operation
         liveview_active: bool       # Is live view active?
         liveview_restart: bool      # Restart liveview after action?
         liveview_lvqty: str         # Last resolution used for liveview
