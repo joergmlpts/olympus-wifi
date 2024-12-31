@@ -1,4 +1,4 @@
-import argparse, datetime, io, os, queue, socket, sys, threading, tkinter, time
+import argparse, io, queue, socket, threading, tkinter
 from dataclasses import dataclass   # needs Python 3.7 or later
 from typing import Tuple, Optional
 
@@ -323,10 +323,7 @@ class LiveViewWindow:
 
     def take_pic(self) -> None:
         "Take a picture."
-        self.camera.stop_liveview()
         self.camera.take_picture()
-        self.camera.start_liveview(port=self.port,
-                                   lvqty=self.lvqty_list[self.lvqty_cur])
 
     def on_lvqty(self, *args) -> None:
         """
@@ -337,7 +334,6 @@ class LiveViewWindow:
         if self.lvqty_cur != self.lvqty_var.get():
             self.lvqty_cur = self.lvqty_var.get()
             self.camera.stop_liveview()
-            self.camera.send_command('switch_cammode', mode='play')
             self.camera.start_liveview(port=self.port,
                                        lvqty=self.lvqty_list[self.lvqty_cur])
 
@@ -352,11 +348,8 @@ class LiveViewWindow:
         camprop = self.camprop_info[var_name]
         if camprop.cur_val != camprop.variable.get():
             camprop.cur_val = camprop.variable.get()
-            self.camera.stop_liveview()
             self.camera.set_camprop(camprop.name,
                                     camprop.values[camprop.cur_val])
-            self.camera.start_liveview(port=self.port,
-                                  lvqty=self.lvqty_list[self.lvqty_cur])
 
     def next_image(self) -> ImageTk.PhotoImage:
         """
@@ -364,7 +357,13 @@ class LiveViewWindow:
 
         :returns: *ImageTk.PhotoImage*
         """
-        jpeg_and_extension = self.img_queue.get()
+        try:
+            jpeg_and_extension = self.img_queue.get(timeout=4.0)
+        except queue.Empty as e:
+            e.add_note("No data could be fetched within 4s.")
+            raise TimeoutError("Timeout while waiting for imagedata from camera. Maybe you need to check your "
+                               "firewall settings for incoming UDP traffic (from 192.168.0.10).") from e
+
         orientation = self.get_orientation(jpeg_and_extension.extension)
         if orientation is None or orientation == 1:
             return ImageTk.PhotoImage(data=jpeg_and_extension.jpeg)
@@ -426,10 +425,7 @@ class LiveViewWindow:
         The live view is stopped before setting the clock and restarted
         afterwards.
         """
-        self.camera.stop_liveview()
         self.camera.set_clock()
-        self.camera.start_liveview(port=self.port,
-                                   lvqty=self.lvqty_list[self.lvqty_cur])
 
     def power_off_and_exit(self):
         "Turn camera off and exit."
