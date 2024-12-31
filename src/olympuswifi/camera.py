@@ -80,7 +80,7 @@ class OlympusCamera:
 
     @dataclass
     class CamStatus:
-        cammode_current: Enum       # Currently selected mode of operation
+        cammode_current: CamMode    # Currently selected mode of operation
         liveview_active: bool       # Is live view active?
         liveview_restart: bool      # Restart liveview after action?
         liveview_lvqty: str         # Last resolution used for liveview
@@ -242,6 +242,9 @@ class OlympusCamera:
         return False
 
     def _action_end(self) -> None:
+        """
+        Releases lock and restarts liveview if needed.
+        """
         self._camera_status.execution_lock.release()
         if self._camera_status.liveview_restart and not self._camera_status.liveview_active:
             self.start_liveview(self._camera_status.liveview_port, self._camera_status.liveview_lvqty)
@@ -466,7 +469,8 @@ class OlympusCamera:
         """
         The camera takes a picture.
         """
-        if self.get_camera_model().lower() == "e-m10markiv":
+        if 'shutter' not in self.commands['switch_cammode'].args['mode']:
+            # Camera does not support shutter mode; use record mode.
             if self._action_begin(self.CamMode.RECORD):
                 if not self._camera_status.liveview_active:
                     self.start_liveview(self.DEFAULT_PORT, self._camera_status.liveview_lvqty)
@@ -476,6 +480,7 @@ class OlympusCamera:
                     self.send_command('exec_takemotion', com='starttake')
                 self._action_end()
         else:
+            # Camera supports shutter mode.
             if self._action_begin(self.CamMode.SHUTTER):
                 time.sleep(0.5)
                 self.send_command('exec_shutter', com='1st2ndpush')
