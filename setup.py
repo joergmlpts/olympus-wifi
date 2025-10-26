@@ -6,7 +6,7 @@ def long_description() -> str:
         return f.read()
 
 setup(name='olympuswifi',
-      version='0.9.3',
+      version='1.0.0',
       package_dir={'olympuswifi': 'src/olympuswifi'},
       packages=['olympuswifi'],
       author='joergmlpts',

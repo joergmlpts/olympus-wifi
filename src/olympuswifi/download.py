@@ -104,7 +104,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', '-o', required=False, default=None,
                         help="Local directory for downloaded photos.")
-    parser.add_argument('--date-range', '-dr',
+    parser.add_argument('--date-range', '-D',
                         nargs=2, type=parse_date, metavar=('START', 'END'),
                         default=(None, None),
                         help='Start and end dates to download photos from. '

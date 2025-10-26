@@ -131,7 +131,7 @@ def main() -> None:
                         help="Local directory for downloaded photos.")
     parser.add_argument('--download', '-d', action="store_true",
                         required=False, help="Download photos from camera.")
-    parser.add_argument('--date-range', '-dr',
+    parser.add_argument('--date-range', '-D',
                         nargs=2, type=parse_date, metavar=('START', 'END'),
                         default=(None, None),
                         help='Start and end dates to download photos from. '

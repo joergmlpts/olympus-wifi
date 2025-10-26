@@ -1,6 +1,6 @@
 [project]
 name = 'olympuswifi'
-version = '0.9.3'
+version = '1.0.0'
 authors = [
   { name='joergmlpts', email='joergmlpts@outlook.com' },
 ]
