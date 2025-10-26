@@ -76,6 +76,8 @@ functionality.
      --output OUTPUT, -o OUTPUT
                            Local directory for downloaded photos.
      --download, -d        Download photos from camera.
+     --date-range START END, -dr START END
+                           Start and end dates to download photos from. Must be in YYYY-MM-DD format.
      --power_off, -p       Turn camera off.
      --set_clock, -c       Set camera clock to current time.
      --shoot, -S           Take a picture.
@@ -89,6 +91,11 @@ download
   The options *-d* and *--download* download the images from the camera. Instead
   of calling *olympus-camera* with option *--download*, download can
   be started directly by calling script *olympus-download*.
+
+date-range
+  The options *-dr* and *--date-range* are OPTIONAL, and specify a date range to
+  download images from. The dates must be specified in YYYY-MM-DD format, and
+  the range is inclusive. This option also works with *olympus-download*
 
 output
   The options *-o* and *--output* specify the output directory for image
