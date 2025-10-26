@@ -3,7 +3,7 @@ from typing import Dict, Optional
 
 from .camera import OlympusCamera, RequestError, ResultError
 from .liveview import LiveViewWindow
-from .download import download_photos
+from .download import download_photos, parse_date
 
 
 ######################################################################
@@ -131,6 +131,12 @@ def main() -> None:
                         help="Local directory for downloaded photos.")
     parser.add_argument('--download', '-d', action="store_true",
                         required=False, help="Download photos from camera.")
+    parser.add_argument('--date-range', '-dr',
+                        nargs=2, type=parse_date, metavar=('START', 'END'),
+                        default=(None, None),
+                        help='Start and end dates to download photos from. '
+                             'Must be in YYYY-MM-DD format. If argument not '
+                             'given, will download everything.')
     parser.add_argument('--power_off', '-p', action="store_true",
                         required=False, help="Turn camera off.")
     parser.add_argument('--set_clock', '-c', action="store_true",
@@ -147,6 +153,12 @@ def main() -> None:
                         "send to camera; multiple commands are supported.")
 
     args = parser.parse_args()
+    if all(args.date_range):
+        start, end = args.date_range
+        if start > end:
+            parser.error(
+                "Start date must be before end date"
+            )
 
     # Connect to camera.
     camera = OlympusCamera()
@@ -170,7 +182,7 @@ def main() -> None:
         LiveViewWindow(camera, args.port)
 
     if args.download:
-        download_photos(camera, args.output)
+        download_photos(camera, args.output, args.date_range)
 
     # Turn camera off if requested.
     if args.power_off:
