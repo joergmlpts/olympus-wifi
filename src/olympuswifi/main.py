@@ -131,6 +131,8 @@ def main() -> None:
                         help="Local directory for downloaded photos.")
     parser.add_argument('--download', '-d', action="store_true",
                         required=False, help="Download photos from camera.")
+    parser.add_argument('--extension', '-e',
+                        help="Limit download to this extension.")
     parser.add_argument('--date-range', '-D',
                         nargs=2, type=parse_date, metavar=('START', 'END'),
                         default=(None, None),
@@ -182,7 +184,7 @@ def main() -> None:
         LiveViewWindow(camera, args.port)
 
     if args.download:
-        download_photos(camera, args.output, args.date_range)
+        download_photos(camera, args.output, args.date_range, args.extension)
 
     # Turn camera off if requested.
     if args.power_off:
