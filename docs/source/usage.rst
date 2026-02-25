@@ -77,7 +77,7 @@ functionality.
                            Local directory for downloaded photos.
      --download, -d        Download photos from camera.
      --date-range START END, -D START END
-                           Start and end dates to download photos from. Must be in YYYY-MM-DD format.
+                           Start and end dates to download photos from. Must be in YYYY-MM-DD format or an integer (days before today, e.g. -D 1 0 for yesterday to today).
      --power_off, -p       Turn camera off.
      --set_clock, -c       Set camera clock to current time.
      --shoot, -S           Take a picture.
@@ -94,8 +94,10 @@ download
 
 date-range
   The options *-D* and *--date-range* are OPTIONAL, and specify a date range to
-  download images from. The dates must be specified in YYYY-MM-DD format, and
-  the range is inclusive. This option also works with *olympus-download*
+  download images from. The dates can be specified in YYYY-MM-DD format or as 
+  integers of days before today (*0 0* for only today, *1 0* for yesterday
+  and today).
+  The range is inclusive. This option also works with *olympus-download*
 
 output
   The options *-o* and *--output* specify the output directory for image

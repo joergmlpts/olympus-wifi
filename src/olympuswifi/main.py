@@ -135,7 +135,9 @@ def main() -> None:
                         nargs=2, type=parse_date, metavar=('START', 'END'),
                         default=(None, None),
                         help='Start and end dates to download photos from. '
-                             'Must be in YYYY-MM-DD format. If argument not '
+                             'Must be in YYYY-MM-DD format or integers '
+                             '(days before today, e.g. -D 1 0 for yesterday '
+                             'to today). If argument not '
                              'given, will download everything.')
     parser.add_argument('--power_off', '-p', action="store_true",
                         required=False, help="Turn camera off.")
