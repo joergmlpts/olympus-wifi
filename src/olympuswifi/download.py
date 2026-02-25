@@ -17,7 +17,7 @@ def download_photos(
 
     :param output_dir: local directory to write downloaded camera images to
     :type output_dir: *str*
-    :param daterange: Optional - a tuple (start, end) of datetime objects
+    :param daterange: Optional - a tuple (start, end) of date objects
         designating the time range to download images from
     :returns: nothing; warnings are written to *stdout*
     """
@@ -28,7 +28,7 @@ def download_photos(
             # If cam_file.date_time lies outside specified range, skip
             file_date = datetime.datetime.fromisoformat(
                 cam_file.date_time
-            )
+            ).date()
 
             if not (daterange[0] <= file_date <= daterange[1]):
                 continue
@@ -140,15 +140,15 @@ def main() -> None:
         camera.send_command('exec_pwoff')
 
 
-def parse_date(date_string: str) -> datetime.datetime:
+def parse_date(date_string: str) -> datetime.date:
     """
-    Parses date string into a datetime object
+    Parses date string into a date object
     """
     try:
         return datetime.datetime.strptime(
             date_string,
             '%Y-%m-%d',
-        )
+        ).date()
 
     except ValueError:
         raise argparse.ArgumentTypeError(
