@@ -10,7 +10,8 @@ from .camera import OlympusCamera
 def download_photos(
     camera: OlympusCamera,
     output_dir: str,
-    daterange: tuple = (None, None)
+    daterange: tuple = (None, None),
+    extension: str | None = None
 ) -> None:
     """
     Function download_photos() downloads photos from the Olympus camera.
@@ -22,6 +23,10 @@ def download_photos(
     :returns: nothing; warnings are written to *stdout*
     """
     for cam_file in camera.list_images():
+        if extension is not None and \
+                not cam_file.file_name.lower().endswith(extension.lower()):
+            continue
+
         # Check if user specified a daterange
         if all(daterange):
 
@@ -104,6 +109,8 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('--output', '-o', required=False, default=None,
                         help="Local directory for downloaded photos.")
+    parser.add_argument('--extension', '-e',
+                        help="Limit download to extension.")
     parser.add_argument('--date-range', '-D',
                         nargs=2, type=parse_date, metavar=('START', 'END'),
                         default=(None, None),
@@ -135,7 +142,7 @@ def main() -> None:
     if args.set_clock:
         camera.set_clock()
 
-    download_photos(camera, args.output, args.date_range)
+    download_photos(camera, args.output, args.date_range, args.extension)
 
     # Turn camera off if requested.
     if args.power_off:
